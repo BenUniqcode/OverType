@@ -85,8 +85,10 @@
 					$.ionSound.play('typewriter-spacebar');
 				} else {
 					if (key == 8) { // backspace
-						x--;
-						$.ionSound.play('typewriter-spacebar');
+						if (x > 1) {
+							x--;
+							$.ionSound.play('typewriter-spacebar');
+						}
 					} else {
 						if (key == 32) { // space
 							$.ionSound.play('typewriter-spacebar');
@@ -199,6 +201,12 @@
 			<h2>
 				Changelog
 			</h2>
+			<h3>
+				version 1.2 (2014-02-10)
+			</h3>
+			<ul>
+				<li>Don't allow backspacing past the beginning of the line.</li>
+			</ul>
 			<h3>
 				version 1.1 (2014-02-10)
 			</h3>
