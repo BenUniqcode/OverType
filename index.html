@@ -25,7 +25,24 @@
 			}
 			.output {
 				font-family: Courier, Courier New, fixed;
-				font-size: 20pt;
+				font-size: 20px;
+				position: absolute;
+				left: 5em;
+				top: 3em;
+				border: 1px solid black;
+				margin-bottom: 2em;
+				padding: 8ex 2em;
+				width: 50em;
+				height: 80ex;
+				display: none;
+			}
+			.cursor {
+				position: absolute;
+				z-index: 999;
+				width: 10px;
+				height: 2px;
+				background-color: black;
+				display: none;
 			}
 		</style>
 		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
@@ -71,22 +88,38 @@
 				221: '}',
 				222: '"',
 			};
-			var x = 1, y = 3;
+			var x = 1, y = 3, backspaces = 0;
 			var timeout;
+			var vmid = $(window).height() / 2;
+			var hmid = $(window).width() / 2;
 			function handle_keypress(e) {
 				$('.info').hide();
+				$('.output').show();
+				$('.cursor').show();
 				key = e.which;
 				if (key == 13) { // enter
 					e.preventDefault();
 					$.ionSound.play('typewriter-carriage-return');
+					$('.output').append('<br/>');
+					line_length = x;
 					x = 1;
+					backspaces = 0;
 					y++;
+					return_time = 13 * line_length;
+					$('.output').animate({
+						top: (vmid - (y * 24)) + 'px',
+					}, 100).animate({
+						left: (hmid - (x * 12)) + 'px',
+					}, return_time, function() {
+						$.ionSound.stop('typewriter-carriage-return');
+					}); // Stop playing the sound when the animation completes
 				} else if (key == 16) { // shift
 					$.ionSound.play('typewriter-spacebar');
 				} else {
 					if (key == 8) { // backspace
 						if (x > 1) {
 							x--;
+							backspaces++;
 							$.ionSound.play('typewriter-spacebar');
 						}
 					} else {
@@ -104,26 +137,35 @@
 							} else if (shifted[key]) {
 								char = shifted[key];
 							} else {
-								char = '';
+								char = '&nbsp;';
 							}
 						} else if (char.match(/[A-Za-z0-9]/)) {
 							char = char.toLowerCase();
 						} else if (unshifted[key]) {
 							char = unshifted[key];
 						} else {
-							char = '';
+							char = '&nbsp;';
 						}
 						// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
 						var intensity = Math.floor((Math.random() * colour_variation));
 						var color = 'rgb(' + intensity + ',' + intensity + ',' + intensity + ')';
-						$('.output').append('<span style="position: absolute; top: ' + (y * 2.5) + 'ex; left: ' + (x * 0.55) + 'em; color: ' + color + ';">' + char + '</span>');
+						// Random vertical offset
+						var voffset = (Math.random() * 2) - 1;
+						$('.output').append('<span style="position: relative; top: ' + voffset + 'px; left: -' + (backspaces * 0.6) + 'em; color: ' + color + ';">' + char + '</span>')
 						if (x < max_width) {
 							x++;
+						} else {
+							backspaces++; // Fudge hard right margin without position:absolute
 						}
 					}
+					$('.output').animate({
+						top: (vmid - (y * 24)) + 'px',
+						left: (hmid - (x * 12)) + 'px',
+					}, 50);
 				}
 			}
 			$(function() {
+				$('.cursor').css('top', vmid + 24).css('left', hmid + 30);
 				$.ionSound({
 					path: "assets/typewriter_sounds/",
     			sounds: [
@@ -142,13 +184,13 @@
 					clearTimeout(timeout);
     			timeout = setTimeout(function() { 
     				handle_keypress(e); 
-    			}, 75);
+    			}, 65);
 				})
 				.on('keyup', function(e) {
 					// Play the key release after a short delay
 					setTimeout(function() {
 						$.ionSound.play('typewriter-keyup');
-					}, 50);
+					}, 65);
 				}); // on()
 			}); //$()
 		</script>
@@ -230,6 +272,8 @@
 			</p>
 		</div>
 		<div class="output">
+		</div>
+		<div class="cursor">
 		</div>
 	</body>
 </html>
