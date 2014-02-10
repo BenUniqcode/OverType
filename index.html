@@ -6,113 +6,208 @@
 		<style type="text/css">
 			body {
 				font-family: Helvetica, sans-serif;
+				font-size: 10pt;
 			}
-			.typewriter {
-				font-family: Times, serif;
-				font-size: 24pt;
+			h2 {
+				font-size: 12pt;
+			}
+			h3 {
+				font-size: 11pt;
+			}
+			.input {
 				position: absolute;
 				left: -1000px;
 				top: -1000px;
 			}
 			.instruct {
-				font-size: 24pt;
-				color: #888;
-				font-style: italic;
+				font-size: 20pt;
+				color: #666;
 			}
 			.output {
 				font-family: Courier, Courier New, fixed;
-				font-size: 24pt;
+				font-size: 20pt;
 			}
 		</style>
 		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
 		<script type="text/javascript">window.jQuery || document.write( '<script type="text/javascript" src="assets/ion_sound_1.3.0/js/vendor/jquery-1.10.2.min.js"><\/script>' )</script>
 		<script type="text/javascript" src="assets/ion_sound_1.3.0/js/ion-sound/ion.sound.min.js"></script>
 		<script type="text/javascript">
+			const bell_width = 69;
+			const max_width = 80;
+			const colour_variation = 90;
+			const unshifted = {
+			   59: ';',
+				 61: '=',
+				173: '-',
+				188: ',',
+				190: '.',
+				191: '/',
+				192: '`',
+				219: '[',
+				220: '\\',
+				221: ']',
+				222: '\'',
+			};
+			const shifted = {
+				48: ')',
+				49: '!',
+				50: '@',
+				51: '£',
+				52: '$',
+				53: '%',
+				54: '^',
+				55: '&',
+				56: '*',
+				57: '(',
+				59: ':',
+				61: '+',
+				173: '_',
+				188: '<',
+				190: '>',
+				191: '?',
+				192: '~',
+				219: '{',
+				220: '|',
+				221: '}',
+				222: '"',
+			};
+			var x = 1, y = 3;
+			var timeout;
+			function handle_keypress(e) {
+				$('.info').hide();
+				key = e.which;
+				if (key == 13) { // enter
+					e.preventDefault();
+					$.ionSound.play('typewriter-carriage-return');
+					x = 1;
+					y++;
+				} else if (key == 16) { // shift
+					$.ionSound.play('typewriter-spacebar');
+				} else {
+					if (key == 8) { // backspace
+						x--;
+						$.ionSound.play('typewriter-spacebar');
+					} else {
+						if (key == 32) { // space
+							$.ionSound.play('typewriter-spacebar');
+						} else if (x == bell_width) {
+							$.ionSound.play('typewriter-bell-2');
+						} else {
+							$.ionSound.play('typewriter-keydown');
+						}
+						var char = String.fromCharCode(key);
+						if (e.shiftKey) {
+							if (char.match(/[A-Za-z]/)) {
+								char = char.toUpperCase();
+							} else if (shifted[key]) {
+								char = shifted[key];
+							} else {
+								char = '';
+							}
+						} else if (char.match(/[A-Za-z0-9]/)) {
+							char = char.toLowerCase();
+						} else if (unshifted[key]) {
+							char = unshifted[key];
+						} else {
+							char = '';
+						}
+						// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
+						var intensity = Math.floor((Math.random() * colour_variation));
+						var color = 'rgb(' + intensity + ',' + intensity + ',' + intensity + ')';
+						$('.output').append('<span style="position: absolute; top: ' + (y * 2.5) + 'ex; left: ' + (x * 0.55) + 'em; color: ' + color + ';">' + char + '</span>');
+						if (x < max_width) {
+							x++;
+						}
+					}
+				}
+			}
 			$(function() {
 				$.ionSound({
 					path: "assets/typewriter_sounds/",
     			sounds: [
-        		"typewriter-key",
-        		"typewriter-line-break-1",
-        		"typewriter-return-1",
+        		"typewriter-keydown",
+        		"typewriter-keyup",
+        		"typewriter-carriage-return",
         		"typewriter-spacebar",
         		"typewriter-bell-2",
     			],
     			multiPlay: true,
 				});
-				var x = 1, y = 13;
-				var width = 70;
-				$('.typewriter').val('').trigger('focus')
-					.on('blur', function() { $(this).trigger('focus'); })
-					.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
-					$('.instruct').html('');
-					key = e.which;
-					if (key == 13) { // enter
-						e.preventDefault();
-						$.ionSound.play('typewriter-return-1');
-						x = 1;
-						y++;
-					} else if (key == 16) { // shift
-						$.ionSound.play('typewriter-spacebar');
-					} else {
-						if (key == 8) { // backspace
-					  	x--;
-							$.ionSound.play('typewriter-spacebar');
-					  } else {
-					  	if (key == 32) { // space
-					  		$.ionSound.play('typewriter-spacebar');
-					  	} else if (x == width) {
-					  		$.ionSound.play('typewriter-bell-2');
-					  	} else {
-					  		$.ionSound.play('typewriter-key');
-					  	}
-					  	var char = String.fromCharCode(key);
-					  	if (e.shiftKey) {
-					  		char = char.toUpperCase();
-					  	} else {
-					  		char = char.toLowerCase();
-					  	}
-							$('.output').append('<span style="position: absolute; top: ' + (y * 2) + 'ex; left: ' + (x * 0.55) + 'em;">' + char + '</span>');
-							x++;
-						}
-					}
-				});
-			});
+				$('.input').val('').trigger('focus')
+				.on('blur', function(e) { e.preventDefault(); $(this).trigger('focus'); })
+				.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
+					// Use timeout to regulate maximum typing speed
+					clearTimeout(timeout);
+    			timeout = setTimeout(function() { 
+    				handle_keypress(e); 
+    			}, 75);
+				})
+				.on('keyup', function(e) {
+					// Play the key release after a short delay
+					setTimeout(function() {
+						$.ionSound.play('typewriter-keyup');
+					}, 50);
+				}); // on()
+			}); //$()
 		</script>
 	</head>
 	<body>
-		<h1>Ben's Super-Realistic* Typewriter Simulator</h1>
-		<small>* Neither realism nor superness guaranteed</small>
-		<p>
-			All the existing typewriter simulators that I've found on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed. On a real typewriter, backspace
-			simply moves the carriage back one space, allowing you to overtype a previously typed character; so I have implemented
-			it this way. If you want to erase a character, you need Tipp-Ex. (NB I do not advise using Tipp-Ex on your monitor). 
-		</p>
-		<p>
-			Make sure you have your sound turned on, for the fully-immersive experience, and so that you can hear the carriage return bell so you know when to hit return!
-		</p>
-		<p>
-			Improvements I'd like to make: 
-		</p>
-		<ul>
-			<li>A better (manual) carriage return sound, ideally that changes length according to how long the line was.</li>
-			<li>A shift sound when the shift key is pressed, and another when it's released.</li>
-			<li>Truncate sounds rather than skipping them if you type too fast. Maybe limit how fast you can type. If you type too fast, jam the mechanism.</li>
-		</ul>
-			
-		<p>
-			For Archie. Developed by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
-			<a href="https://github.com/IonDen/ion.sound">IonSound</a>. Typewriter sound effects from <a href="http://freesound.org">Freesound</a> and <a href="http://www.soundjay.com">SoundJay</a>, some of them edited by me. Tested on Firefox27/Mac and Chrome32/Mac. 
-			
-		</p>
-		<noscript>
-			<b>You need to <a href="http://enable-javascript.com">enable Javascript in your browser</a> for this to work.
-		</noscript>
-		<textarea class="typewriter">
+		<textarea class="input">
 		</textarea>
-		<hr>
-		<div class="instruct">
-			Go ahead and type....
+		<h1 style="margin-bottom: 0">Ben's Super-Realistic* Typewriter Simulator</h1>
+		<p style="margin-top: 0"><small>* Neither realism nor superness guaranteed</small></p>
+		<div class="info">
+			<p>
+				All the existing typewriter simulators that I've found on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed, just like a computer. On a real typewriter, backspace
+				simply moves the carriage back one space, allowing you to overtype a previously typed character; so I have implemented
+				it this way. If you want to erase a character, you need Tipp-Ex. (NB I do not advise using Tipp-Ex on your monitor). 
+			</p>
+			<p>
+				Make sure you have your sound turned on, for the fully-immersive experience, and so that you can hear the carriage return bell so you know when to hit return!
+			</p>
+			<noscript>
+				<b>You need to <a href="http://enable-javascript.com">enable Javascript in your browser</a> for this to work.
+			</noscript>
+			<h2>Instructions</h2>
+			<div class="instruct">
+				<ul>
+				<li>Just start typing (all the above text will disappear)</li>
+				<li>Don't click on the page or it may stop working.</li>
+				<li>If it stops working just reload the page.</li>
+				</ul>
+			</div>
+			<h2>
+				Changelog
+			</h2>
+			<h3>
+				version 1.1 (2014-02-10)
+			</h3>
+			<ul>
+				<li>Separate sounds when keys are pressed and released, and for the shift key.</li>
+				<li>Better (manual) carriage return sound.</li>
+				<li>Limit the speed at which you can type.</li>
+				<li>If you keep typing past the bell and hit the end of the line (80 characters), the carriage stops instead of continuing. In other words there is now a hard line length limit.</li>
+				<li>Punctuation characters are handled (these are based on my UK Mac keyboard; unless you have the same keyboard some characters will probably be "wrong" for you.).</li>
+				<li>Random variation of colour to simulate variations in key pressure and uneven ribbon ink.</li>
+				<li>Hide this text when you start typing, partly to give more space, but mostly to dodge the problem of trying to work out where to position the typewriter output.</li>
+			</ul>
+			<h3>
+				version 1.0 (2014-02-09)
+			</h3>
+			<h2>
+				Improvements I'd like to make
+			</h2>
+			<ul>
+				<li>Change the length of the carriage return sound according to the position.</li>
+				<li>Get my head round jQuery.Deferred() or similar so that the keyup sound waits for the keydown sound to finish before playing.</li>
+				<li>If you type too fast or try to type two keys at once, the mechanism should jam.</li>
+			</ul>
+			
+			<p>
+				For Archie. Developed by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
+				<a href="https://github.com/IonDen/ion.sound">IonSound</a>. Typewriter sound effects from <a href="http://freesound.org">Freesound</a> and <a href="http://www.soundjay.com">SoundJay</a>, some of them edited by me. Tested on Firefox27/Mac and Chrome32/Mac. 
+			
+			</p>
 		</div>
 		<div class="output">
 		</div>
