@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"> 
+		<title>Ben's Super-Realistic Typewriter Simulator</title>
+		<style type="text/css">
+			body {
+				font-family: Helvetica, sans-serif;
+			}
+			.typewriter {
+				font-family: Times, serif;
+				font-size: 24pt;
+				position: absolute;
+				left: -1000px;
+				top: -1000px;
+			}
+			.instruct {
+				font-size: 24pt;
+				color: #888;
+				font-style: italic;
+			}
+			.output {
+				font-family: Courier, Courier New, fixed;
+				font-size: 24pt;
+			}
+		</style>
+		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+		<script type="text/javascript">window.jQuery || document.write( '<script type="text/javascript" src="assets/ion_sound_1.3.0/js/vendor/jquery-1.10.2.min.js"><\/script>' )</script>
+		<script type="text/javascript" src="assets/ion_sound_1.3.0/js/ion-sound/ion.sound.min.js"></script>
+		<script type="text/javascript">
+			$(function() {
+				$.ionSound({
+					path: "assets/typewriter_sounds/",
+    			sounds: [
+        		"typewriter-key",
+        		"typewriter-line-break-1",
+        		"typewriter-return-1",
+        		"typewriter-spacebar",
+        		"typewriter-bell-2",
+    			],
+    			multiPlay: true,
+				});
+				var x = 1, y = 13;
+				var width = 70;
+				$('.typewriter').val('').trigger('focus')
+					.on('blur', function() { $(this).trigger('focus'); })
+					.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
+					$('.instruct').html('');
+					key = e.which;
+					if (key == 13) { // enter
+						e.preventDefault();
+						$.ionSound.play('typewriter-return-1');
+						x = 1;
+						y++;
+					} else if (key == 16) { // shift
+						$.ionSound.play('typewriter-spacebar');
+					} else {
+						if (key == 8) { // backspace
+					  	x--;
+							$.ionSound.play('typewriter-spacebar');
+					  } else {
+					  	if (key == 32) { // space
+					  		$.ionSound.play('typewriter-spacebar');
+					  	} else if (x == width) {
+					  		$.ionSound.play('typewriter-bell-2');
+					  	} else {
+					  		$.ionSound.play('typewriter-key');
+					  	}
+					  	var char = String.fromCharCode(key);
+					  	if (e.shiftKey) {
+					  		char = char.toUpperCase();
+					  	} else {
+					  		char = char.toLowerCase();
+					  	}
+							$('.output').append('<span style="position: absolute; top: ' + (y * 2) + 'ex; left: ' + (x * 0.55) + 'em;">' + char + '</span>');
+							x++;
+						}
+					}
+				});
+			});
+		</script>
+	</head>
+	<body>
+		<h1>Ben's Super-Realistic* Typewriter Simulator</h1>
+		<small>* Neither realism nor superness guaranteed</small>
+		<p>
+			All the existing typewriter simulators that I've found on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed. On a real typewriter, backspace
+			simply moves the carriage back one space, allowing you to overtype a previously typed character; so I have implemented
+			it this way. If you want to erase a character, you need Tipp-Ex. (NB I do not advise using Tipp-Ex on your monitor). 
+		</p>
+		<p>
+			Make sure you have your sound turned on, for the fully-immersive experience, and so that you can hear the carriage return bell so you know when to hit return!
+		</p>
+		<p>
+			Improvements I'd like to make: 
+		</p>
+		<ul>
+			<li>A better (manual) carriage return sound, ideally that changes length according to how long the line was.</li>
+			<li>A shift sound when the shift key is pressed, and another when it's released.</li>
+			<li>Truncate sounds rather than skipping them if you type too fast. Maybe limit how fast you can type. If you type too fast, jam the mechanism.</li>
+		</ul>
+			
+		<p>
+			For Archie. Developed by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
+			<a href="https://github.com/IonDen/ion.sound">IonSound</a>. Typewriter sound effects from <a href="http://freesound.org">Freesound</a> and <a href="http://www.soundjay.com">SoundJay</a>, some of them edited by me. Tested on Firefox27/Mac and Chrome32/Mac. 
+			
+		</p>
+		<noscript>
+			<b>You need to <a href="http://enable-javascript.com">enable Javascript in your browser</a> for this to work.
+		</noscript>
+		<textarea class="typewriter">
+		</textarea>
+		<hr>
+		<div class="instruct">
+			Go ahead and type....
+		</div>
+		<div class="output">
+		</div>
+	</body>
+</html>
