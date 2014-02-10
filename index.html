@@ -157,25 +157,44 @@
 		<h1 style="margin-bottom: 0">Ben's Super-Realistic* Typewriter Simulator</h1>
 		<p style="margin-top: 0"><small>* Neither realism nor superness guaranteed</small></p>
 		<div class="info">
+			<h2>
+				Why?
+			</h2>
 			<p>
 				All the existing typewriter simulators that I've found on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed, just like a computer. On a real typewriter, backspace
 				simply moves the carriage back one space, allowing you to overtype a previously typed character; so I have implemented
 				it this way. If you want to erase a character, you need Tipp-Ex. (NB I do not advise using Tipp-Ex on your monitor). 
 			</p>
+			<h2>
+				Yeah, but... WHY?
+			</h2>
 			<p>
-				Make sure you have your sound turned on, for the fully-immersive experience, and so that you can hear the carriage return bell so you know when to hit return!
+				Because it's a fun thing to play with and also an interesting little development project - there's more of a challenge to the implementation than you might expect...
 			</p>
 			<noscript>
-				<b>You need to <a href="http://enable-javascript.com">enable Javascript in your browser</a> for this to work.
+				<p style="font-size: 36px">
+					<b>You need to <a href="http://enable-javascript.com">enable Javascript in your browser</a> for this to work.</b>
+				</p>
 			</noscript>
 			<h2>Instructions</h2>
 			<div class="instruct">
 				<ul>
-				<li>Just start typing (all the above text will disappear)</li>
+				<li>Make sure you have your sound turned on for the fully-immersive experience!</li>
+				<li>Just start typing (all this informational text will disappear to give you more space).</li>
 				<li>Don't click on the page or it may stop working.</li>
 				<li>If it stops working just reload the page.</li>
 				</ul>
 			</div>
+			<h2>
+				Improvements I'd like to make
+			</h2>
+			<ul>
+				<li>Change the length of the carriage return sound according to the position (ie how far it has to move).</li>
+				<li>Get my head round jQuery.Deferred() or similar so that the keyup sound waits for the keydown sound to finish before playing.</li>
+				<li>If you type too fast or try to type two keys at once, the mechanism should jam.</li>
+				<li>User-adjustable settings for things like ribbon wear.</li>
+				<li>Further suggestions welcome (though remember this is just for fun!) to <a href="mailto:ben@uniqcode.com">ben@uniqcode.com</a></li>
+			</ul>
 			<h2>
 				Changelog
 			</h2>
@@ -189,19 +208,11 @@
 				<li>If you keep typing past the bell and hit the end of the line (80 characters), the carriage stops instead of continuing. In other words there is now a hard line length limit.</li>
 				<li>Punctuation characters are handled (these are based on my UK Mac keyboard; unless you have the same keyboard some characters will probably be "wrong" for you.).</li>
 				<li>Random variation of colour to simulate variations in key pressure and uneven ribbon ink.</li>
-				<li>Hide this text when you start typing, partly to give more space, but mostly to dodge the problem of trying to work out where to position the typewriter output.</li>
+				<li>Hide all the informational text when you start typing, partly to give more space for both information and typing, but mostly to dodge the problem of trying to work out where to position the typewriter output so it doesn't crash the info.</li>
 			</ul>
 			<h3>
 				version 1.0 (2014-02-09)
 			</h3>
-			<h2>
-				Improvements I'd like to make
-			</h2>
-			<ul>
-				<li>Change the length of the carriage return sound according to the position.</li>
-				<li>Get my head round jQuery.Deferred() or similar so that the keyup sound waits for the keydown sound to finish before playing.</li>
-				<li>If you type too fast or try to type two keys at once, the mechanism should jam.</li>
-			</ul>
 			
 			<p>
 				For Archie. Developed by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
