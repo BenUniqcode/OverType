@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8"> 
 		<title>Ben's Super-Realistic Typewriter Simulator</title>
-		<style type="text/css">
+		<style type="text/css" media="all">
 			body {
 				font-family: Helvetica, sans-serif;
 				font-size: 10pt;
@@ -27,12 +27,13 @@
 			.output {
 				font-family: Courier, Courier New, fixed;
 				font-size: 20px;
+				line-height: 30px;
 				position: absolute;
 				left: 5em;
 				top: 3em;
 				margin-bottom: 2em;
 				width: 50em;
-				height: 80ex;
+				height: 120ex;
 				background-color: white;
 				border: 1px solid black;
 				padding: 8ex 2em;
@@ -47,6 +48,10 @@
 				background-color: red;
 				display: none;
 			}
+		</style>
+		<style type="text/css" media="print">
+			.cursor, .title, .instruct, #input { display: none }
+			.output { left: 0 !important; top: 0 !important; box-shadow: none; border: none; padding: 10ex 0 0 0; }			
 		</style>
 		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
 		<script type="text/javascript">window.jQuery || document.write( '<script type="text/javascript" src="assets/ion_sound_1.3.0/js/vendor/jquery-1.10.2.min.js"><\/script>' )</script>
@@ -93,7 +98,7 @@
 				221: '}',
 				222: '"',
 			};
-			const xpx = 12, ypx = 21;
+			const xpx = 12, ypx = 30;
 			var x = 0, y = 0, backspaces = 0;
 			var vmid = $(window).height() / 2;
 			var hmid = $(window).width() / 2;
@@ -228,7 +233,7 @@
 
 			$(function() {
 				move_page();
-				$('.cursor').css('top', vmid + ypx + 75).css('left', hmid + 43);
+				$('.cursor').css('top', vmid + ypx + 70).css('left', hmid + 43);
 				$.ionSound({
 					path: "assets/typewriter_sounds/",
     			sounds: [
@@ -273,8 +278,10 @@
 	<body>
 		<textarea id="input">
 		</textarea>
-		<h1 style="margin-bottom: 0">Ben's Super-Realistic* Typewriter Simulator</h1>
-		<p style="margin-top: 0"><small>* Neither realism nor superness guaranteed</small></p>
+		<div class="title">
+			<h1 style="margin-bottom: 0">Ben's Super-Realistic* Typewriter Simulator</h1>
+			<p style="margin-top: 0"><small>* Neither realism nor superness guaranteed</small></p>
+		</div>
 		<div class="info">
 			<h2>
 				Why?
@@ -322,6 +329,13 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.9 (2014-02-11)
+				</h3>
+				<ul>
+					<li>Stylesheet for printing</li>
+					<li>Increased space between lines</li>
+				</ul>
 				<h3>
 					version 1.8 (2014-02-11)
 				</h3>
@@ -395,10 +409,6 @@
 			</div><!-- /changelog -->			
 		</div>
 		<div class="output">
-			<div class="page">
-			</div>
-			<div class="page-shadow">
-			</div>
 		</div>
 		<div class="cursor">
 		</div>
