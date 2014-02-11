@@ -55,7 +55,8 @@
 			const bell_width = 69;
 			const max_width = 80;
 			const tab_width = 8;
-			const colour_variation = 90;
+			const ribbon_lifetime = 800;
+			const colour_variation = 75;
 			const unshifted = {
 			   59: ';',
 				 61: '=',
@@ -94,12 +95,12 @@
 			};
 			const xpx = 12, ypx = 21;
 			var x = 0, y = 0, backspaces = 0;
-			var timeout;
 			var vmid = $(window).height() / 2;
 			var hmid = $(window).width() / 2;
 			var voffset = {};
 			var keydown_mutex = false;
 			var shift_mutex = false;
+			var chars_typed = 0;
 			function handle_keypress(e) {
 				$('.info').hide();
 				$('.output').show();
@@ -182,25 +183,30 @@
 				if (e.shiftKey) {
 					if (char.match(/[A-Za-z]/)) {
 						char = char.toUpperCase();
+						chars_typed++;
 					} else if (shifted[key]) {
 						char = shifted[key];
+						chars_typed++;
 					} else {
 						char = '&nbsp;';
 					}
 				} else if (char.match(/[A-Za-z0-9]/)) {
 					char = char.toLowerCase();
+					chars_typed++;
 				} else if (unshifted[key]) {
 					char = unshifted[key];
+					chars_typed++;
 				} else {
 					char = '&nbsp;';
 				}
 				
 				// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
-				var intensity = Math.floor((Math.random() * colour_variation));
-				var color = 'rgb(' + intensity + ',' + intensity + ',' + intensity + ')';
+				var ink_depletion = Math.round(255 * (chars_typed / ribbon_lifetime));
+				var greylevel = Math.floor((Math.random() * colour_variation)) + ink_depletion;
+				var color = 'rgb(' + greylevel + ',' + greylevel + ',' + greylevel + ')';
 				// Vertical offset
 				if (! voffset[char]) {
-					voffset[char] = Math.round((Math.random() * 2.0) - 1.0);
+					voffset[char] = Math.round(Math.random());
 				}
 				
 				$('.output').append('<span style="position: relative; top: ' + voffset[char] + 'px; left: -' + (backspaces * 0.6) + 'em; color: ' + color + ';">' + char + '</span>');
@@ -316,6 +322,13 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.8 (2014-02-11)
+				</h3>
+				<ul>
+					<li>The ribbon ink now gradually runs out, so the text becomes lighter the more characters you type.</li>
+					<li>Reduced vertical offset, as it was just a tad too wibbly-wobbly.</li>
+				</ul>
 				<h3>
 					version 1.7 (2014-02-11)
 				</h3>
