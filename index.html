@@ -130,52 +130,53 @@
 					}, 100).animate({
 						left: (hmid - (x * xpx)) + 'px',
 					}, return_time, function() {
+						// Stop playing the sound when the animation completes
 						$.ionSound.stop('typewriter-carriage-return');
-					}); // Stop playing the sound when the animation completes
+					}); 
+					return false;
+				}
+				if (key == 8) { // backspace
+					if (x > 1) {
+						x--;
+						backspaces++;
+						$.ionSound.play('typewriter-spacebar');
+					}
 				} else {
-					if (key == 8) { // backspace
-						if (x > 1) {
-							x--;
-							backspaces++;
-							$.ionSound.play('typewriter-spacebar');
-						}
+					if (key == 32) { // space
+						$.ionSound.play('typewriter-spacebar');
+					} else if (x == bell_width) {
+						$.ionSound.play('typewriter-bell-2');
 					} else {
-						if (key == 32) { // space
-							$.ionSound.play('typewriter-spacebar');
-						} else if (x == bell_width) {
-							$.ionSound.play('typewriter-bell-2');
-						} else {
-							$.ionSound.play('typewriter-keydown');
-						}
-						var char = String.fromCharCode(key);
-						if (e.shiftKey) {
-							if (char.match(/[A-Za-z]/)) {
-								char = char.toUpperCase();
-							} else if (shifted[key]) {
-								char = shifted[key];
-							} else {
-								char = '&nbsp;';
-							}
-						} else if (char.match(/[A-Za-z0-9]/)) {
-							char = char.toLowerCase();
-						} else if (unshifted[key]) {
-							char = unshifted[key];
+						$.ionSound.play('typewriter-keydown');
+					}
+					var char = String.fromCharCode(key);
+					if (e.shiftKey) {
+						if (char.match(/[A-Za-z]/)) {
+							char = char.toUpperCase();
+						} else if (shifted[key]) {
+							char = shifted[key];
 						} else {
 							char = '&nbsp;';
 						}
-						// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
-						var intensity = Math.floor((Math.random() * colour_variation));
-						var color = 'rgb(' + intensity + ',' + intensity + ',' + intensity + ')';
-						// Vertical offset
-						if (! voffset[char]) {
-							voffset[char] = (Math.random() * 2) - 1;
-						}
-						$('.output').append('<span style="position: relative; top: ' + voffset[char] + 'px; left: -' + (backspaces * 0.6) + 'em; color: ' + color + ';">' + char + '</span>')
-						if (x < max_width) {
-							x++;
-						} else {
-							backspaces++; // Fudge hard right margin without position:absolute
-						}
+					} else if (char.match(/[A-Za-z0-9]/)) {
+						char = char.toLowerCase();
+					} else if (unshifted[key]) {
+						char = unshifted[key];
+					} else {
+						char = '&nbsp;';
+					}
+					// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
+					var intensity = Math.floor((Math.random() * colour_variation));
+					var color = 'rgb(' + intensity + ',' + intensity + ',' + intensity + ')';
+					// Vertical offset
+					if (! voffset[char]) {
+						voffset[char] = Math.round((Math.random() * 2.0) - 1.0);
+					}
+					$('.output').append('<span style="position: relative; top: ' + voffset[char] + 'px; left: -' + (backspaces * 0.6) + 'em; color: ' + color + ';">' + char + '</span>')
+					if (x < max_width) {
+						x++;
+					} else {
+						backspaces++; // Fudge hard right margin without position:absolute
 					}
 				}
 				return false;
@@ -185,7 +186,7 @@
 				$('.output').animate({
 					top: (vmid - (y * ypx)) + 'px',
 					left: (hmid - (x * xpx)) + 'px',
-				}, 50);
+				}, 20);
 			}
 
 			$(function() {
@@ -214,8 +215,11 @@
 							$.ionSound.play('typewriter-keyup');
 						}, 65);
 						move_page();
-						keydown_mutex = false;
-					} else if (shift_mutex && e.which == 16) {
+						// Wait till all animations have finished before releasing the mutex
+						$(":animated").promise().done(function() {
+							keydown_mutex = false;
+						});
+					} else if (shift_mutex && e.which == 16 && ! e.shiftKey) {
 						$.ionSound.play('typewriter-keyup');
 						shift_mutex = false;
 					}						
@@ -277,6 +281,14 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.6 (2014-02-11)
+				</h3>
+				<ul>
+					<li>If both shift keys are pressed, don't do the keyup sound until both are released.</li>
+					<li>Round the vertical offset to an integer number of pixels.</li>
+					<li>Don't release the keydown mutex until animations have finished. This limits typing speed and prevents being able to type a character onto the next line while a carriage return is in progress.</li>
+				</ul>
 				<h3>
 					version 1.5 (2014-02-11)
 				</h3>
