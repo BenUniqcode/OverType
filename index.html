@@ -25,7 +25,7 @@
 				color: #666;
 			}
 			.output {
-				font-family: Courier, Courier New, fixed;
+				font-family: Courier, "Courier New", monospace;
 				font-size: 20px;
 				line-height: 30px;
 				position: absolute;
@@ -106,6 +106,7 @@
 			var keydown_mutex = false;
 			var shift_mutex = false;
 			var chars_typed = 0;
+			
 			function handle_keypress(e) {
 				$('.info').hide();
 				$('.output').show();
@@ -184,37 +185,39 @@
 				} else {
 					$.ionSound.play('typewriter-keydown');
 				}
-				var char = String.fromCharCode(key);
+				var c = String.fromCharCode(key);
 				if (e.shiftKey) {
-					if (char.match(/[A-Za-z]/)) {
-						char = char.toUpperCase();
+					if (c.match(/[A-Za-z]/)) {
+						c = c.toUpperCase();
 						chars_typed++;
 					} else if (shifted[key]) {
-						char = shifted[key];
+						c = shifted[key];
 						chars_typed++;
 					} else {
-						char = '&nbsp;';
+						c = '&nbsp;';
 					}
-				} else if (char.match(/[A-Za-z0-9]/)) {
-					char = char.toLowerCase();
+				} else if (c.match(/[A-Za-z0-9]/)) {
+					c = c.toLowerCase();
 					chars_typed++;
 				} else if (unshifted[key]) {
-					char = unshifted[key];
+					c = unshifted[key];
 					chars_typed++;
 				} else {
-					char = '&nbsp;';
+					c = '&nbsp;';
 				}
 				
 				// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
 				var ink_depletion = Math.round(255 * (chars_typed / ribbon_lifetime));
 				var greylevel = Math.floor((Math.random() * colour_variation)) + ink_depletion;
 				var color = 'rgb(' + greylevel + ',' + greylevel + ',' + greylevel + ')';
+				
 				// Vertical offset
-				if (! voffset[char]) {
-					voffset[char] = Math.round(Math.random());
+				if (! (c in voffset)) {
+					voffset[c] = Math.round((Math.random() * 2.0) - 1.0);
 				}
 				
-				$('.output').append('<span style="position: relative; top: ' + voffset[char] + 'px; left: -' + (backspaces * 0.6) + 'em; color: ' + color + ';">' + char + '</span>');
+				// Output the character
+				$('.output').append('<span style="position: relative; top: ' + voffset[c] + 'px; left: -' + (backspaces * 0.6) + 'em; color: ' + color + ';">' + c + '</span>');
 				
 				if (x < max_width) {
 					x++;
@@ -329,6 +332,13 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.10 (2014-02-11)
+				</h3>
+				<ul>
+					<li>fix CSS font-family (whoops)</li>
+					<li>per-char vertical offset was not being used consistently</li>
+				</ul>		
 				<h3>
 					version 1.9 (2014-02-11)
 				</h3>
