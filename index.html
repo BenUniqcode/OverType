@@ -98,11 +98,24 @@
 			var hmid = $(window).width() / 2;
 			var voffset = {};
 			var keydown_mutex = false;
+			var shift_mutex = false;
 			function handle_keypress(e) {
 				$('.info').hide();
 				$('.output').show();
 				$('.cursor').show();
 				key = e.which;
+				if (key == 16) { // shift
+					if (shift_mutex) {
+						return false;
+					}
+					$.ionSound.play('typewriter-spacebar');
+					shift_mutex = true;
+					return false;
+				} 
+				if (keydown_mutex) {
+					return false;
+				}
+				keydown_mutex = true;
 				if (key == 13) { // enter
 					e.preventDefault();
 					$.ionSound.play('typewriter-carriage-return');
@@ -119,8 +132,6 @@
 					}, return_time, function() {
 						$.ionSound.stop('typewriter-carriage-return');
 					}); // Stop playing the sound when the animation completes
-				} else if (key == 16) { // shift
-					$.ionSound.play('typewriter-spacebar');
 				} else {
 					if (key == 8) { // backspace
 						if (x > 1) {
@@ -167,8 +178,18 @@
 						}
 					}
 				}
+				return false;
 			}
+			
+			function move_page() {
+				$('.output').animate({
+					top: (vmid - (y * ypx)) + 'px',
+					left: (hmid - (x * xpx)) + 'px',
+				}, 50);
+			}
+
 			$(function() {
+				move_page();
 				$('.cursor').css('top', vmid + ypx + 12).css('left', hmid + 30);
 				$.ionSound({
 					path: "assets/typewriter_sounds/",
@@ -184,24 +205,20 @@
 				$('.input').val('').trigger('focus')
 				.on('blur', function(e) { e.preventDefault(); $(this).trigger('focus'); })
 				.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
-					if (! keydown_mutex) {
-						keydown_mutex = true;
-						handle_keypress(e); 
-					}
+					handle_keypress(e); 
 				})
 				.on('keyup', function(e) {
-					if (keydown_mutex) {
+					if (keydown_mutex && e.which != 16) {
 						// Play the key release sound after a short delay
 						setTimeout(function() {
 							$.ionSound.play('typewriter-keyup');
 						}, 65);
-						$('.output').animate({
-							top: (vmid - (y * ypx)) + 'px',
-							left: (hmid - (x * xpx)) + 'px',
-						}, 50);
-						
+						move_page();
 						keydown_mutex = false;
-					}
+					} else if (shift_mutex && e.which == 16) {
+						$.ionSound.play('typewriter-keyup');
+						shift_mutex = false;
+					}						
 				}); // on()
 			}); //$()
 		</script>
@@ -259,48 +276,56 @@
 			<h2>
 				Changelog
 			</h2>
-			<h3>
-				version 1.4 (2014-02-11)
-			</h3>
-			<ul>
-				<li>Move paper on keyup, not keydown.</li>
-				<li>Use a mutex to ensure only one keypress is handled at a time, instead of a timeout (also fixes a long-held key generating two characters).</li>
-				<li>Each character now has a consistent vertical offset (randomly chosen at the start), instead of randomly changing each time.</li>
-				<li>Drop shadow on page.</li>
-				<li>Fix page moving too far vertically on CR.</li>
-			</ul>
-			<h3>
-				version 1.3 (2014-02-10)
-			</h3>
-			<ul>
-				<li>The typed character now always appears in the centre of the screen; the "paper" moves.
-  Movement of paper and carriage return are animated.</li>
-				<li>A basic cursor to show where the next character will appear. This could eventually become an animated print head.</li>
-				<li>Wibbly-wobbly text: A small random vertical offset is added to each character (suggested by David Gosnell)</li>
-			</ul>
+			<div class="changelog">
+				<h3>
+					version 1.5 (2014-02-11)
+				</h3>
+				<ul>
+					<li>Use a separate mutex for the shift key.</li>
+					<li>Position the page on load so it doesn't jump after the first keypress.</li>
+				</ul>
+				<h3>
+					version 1.4 (2014-02-11)
+				</h3>
+				<ul>
+					<li>Move paper on keyup, not keydown.</li>
+					<li>Use a mutex to ensure only one keypress is handled at a time, instead of a timeout (also fixes a long-held key generating two characters).</li>
+					<li>Each character now has a consistent vertical offset (randomly chosen at the start), instead of randomly changing each time.</li>
+					<li>Drop shadow on page.</li>
+					<li>Fix page moving too far vertically on CR.</li>
+				</ul>
+				<h3>
+					version 1.3 (2014-02-10)
+				</h3>
+				<ul>
+					<li>The typed character now always appears in the centre of the screen; the "paper" moves.
+		Movement of paper and carriage return are animated.</li>
+					<li>A basic cursor to show where the next character will appear. This could eventually become an animated print head.</li>
+					<li>Wibbly-wobbly text: A small random vertical offset is added to each character (suggested by David Gosnell)</li>
+				</ul>
 
-			<h3>
-				version 1.2 (2014-02-10)
-			</h3>
-			<ul>
-				<li>Don't allow backspacing past the beginning of the line.</li>
-			</ul>
-			<h3>
-				version 1.1 (2014-02-10)
-			</h3>
-			<ul>
-				<li>Separate sounds when keys are pressed and released, and for the shift key.</li>
-				<li>Better (manual) carriage return sound.</li>
-				<li>Limit the speed at which you can type.</li>
-				<li>If you keep typing past the bell and hit the end of the line (80 characters), the carriage stops instead of continuing. In other words there is now a hard line length limit.</li>
-				<li>Punctuation characters are handled (these are based on my UK Mac keyboard; unless you have the same keyboard some characters will probably be "wrong" for you.).</li>
-				<li>Random variation of colour to simulate variations in key pressure and uneven ribbon ink.</li>
-				<li>Hide all the informational text when you start typing, partly to give more space for both information and typing, but mostly to dodge the problem of trying to work out where to position the typewriter output so it doesn't crash the info.</li>
-			</ul>
-			<h3>
-				version 1.0 (2014-02-09)
-			</h3>
-			
+				<h3>
+					version 1.2 (2014-02-10)
+				</h3>
+				<ul>
+					<li>Don't allow backspacing past the beginning of the line.</li>
+				</ul>
+				<h3>
+					version 1.1 (2014-02-10)
+				</h3>
+				<ul>
+					<li>Separate sounds when keys are pressed and released, and for the shift key.</li>
+					<li>Better (manual) carriage return sound.</li>
+					<li>Limit the speed at which you can type.</li>
+					<li>If you keep typing past the bell and hit the end of the line (80 characters), the carriage stops instead of continuing. In other words there is now a hard line length limit.</li>
+					<li>Punctuation characters are handled (these are based on my UK Mac keyboard; unless you have the same keyboard some characters will probably be "wrong" for you.).</li>
+					<li>Random variation of colour to simulate variations in key pressure and uneven ribbon ink.</li>
+					<li>Hide all the informational text when you start typing, partly to give more space for both information and typing, but mostly to dodge the problem of trying to work out where to position the typewriter output so it doesn't crash the info.</li>
+				</ul>
+				<h3>
+					version 1.0 (2014-02-09)
+				</h3>
+			</div><!-- /changelog -->			
 		</div>
 		<div class="output">
 			<div class="page">
