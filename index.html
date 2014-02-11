@@ -7,6 +7,7 @@
 			body {
 				font-family: Helvetica, sans-serif;
 				font-size: 10pt;
+				background-color: #eee;
 			}
 			h2 {
 				font-size: 12pt;
@@ -29,11 +30,13 @@
 				position: absolute;
 				left: 5em;
 				top: 3em;
-				border: 1px solid black;
 				margin-bottom: 2em;
-				padding: 8ex 2em;
 				width: 50em;
 				height: 80ex;
+				background-color: white;
+				border: 1px solid black;
+				padding: 8ex 2em;
+				box-shadow: 8px 8px 4px #888;
 				display: none;
 			}
 			.cursor {
@@ -41,7 +44,7 @@
 				z-index: 999;
 				width: 10px;
 				height: 2px;
-				background-color: black;
+				background-color: red;
 				display: none;
 			}
 		</style>
@@ -88,10 +91,13 @@
 				221: '}',
 				222: '"',
 			};
+			const xpx = 12, ypx = 21;
 			var x = 1, y = 3, backspaces = 0;
 			var timeout;
 			var vmid = $(window).height() / 2;
 			var hmid = $(window).width() / 2;
+			var voffset = {};
+			var keydown_mutex = false;
 			function handle_keypress(e) {
 				$('.info').hide();
 				$('.output').show();
@@ -107,9 +113,9 @@
 					y++;
 					return_time = 13 * line_length;
 					$('.output').animate({
-						top: (vmid - (y * 24)) + 'px',
+						top: (vmid - (y * ypx)) + 'px',
 					}, 100).animate({
-						left: (hmid - (x * 12)) + 'px',
+						left: (hmid - (x * xpx)) + 'px',
 					}, return_time, function() {
 						$.ionSound.stop('typewriter-carriage-return');
 					}); // Stop playing the sound when the animation completes
@@ -149,23 +155,21 @@
 						// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
 						var intensity = Math.floor((Math.random() * colour_variation));
 						var color = 'rgb(' + intensity + ',' + intensity + ',' + intensity + ')';
-						// Random vertical offset
-						var voffset = (Math.random() * 2) - 1;
-						$('.output').append('<span style="position: relative; top: ' + voffset + 'px; left: -' + (backspaces * 0.6) + 'em; color: ' + color + ';">' + char + '</span>')
+						// Vertical offset
+						if (! voffset[char]) {
+							voffset[char] = (Math.random() * 2) - 1;
+						}
+						$('.output').append('<span style="position: relative; top: ' + voffset[char] + 'px; left: -' + (backspaces * 0.6) + 'em; color: ' + color + ';">' + char + '</span>')
 						if (x < max_width) {
 							x++;
 						} else {
 							backspaces++; // Fudge hard right margin without position:absolute
 						}
 					}
-					$('.output').animate({
-						top: (vmid - (y * 24)) + 'px',
-						left: (hmid - (x * 12)) + 'px',
-					}, 50);
 				}
 			}
 			$(function() {
-				$('.cursor').css('top', vmid + 24).css('left', hmid + 30);
+				$('.cursor').css('top', vmid + ypx + 12).css('left', hmid + 30);
 				$.ionSound({
 					path: "assets/typewriter_sounds/",
     			sounds: [
@@ -180,17 +184,24 @@
 				$('.input').val('').trigger('focus')
 				.on('blur', function(e) { e.preventDefault(); $(this).trigger('focus'); })
 				.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
-					// Use timeout to regulate maximum typing speed
-					clearTimeout(timeout);
-    			timeout = setTimeout(function() { 
-    				handle_keypress(e); 
-    			}, 65);
+					if (! keydown_mutex) {
+						keydown_mutex = true;
+						handle_keypress(e); 
+					}
 				})
 				.on('keyup', function(e) {
-					// Play the key release after a short delay
-					setTimeout(function() {
-						$.ionSound.play('typewriter-keyup');
-					}, 65);
+					if (keydown_mutex) {
+						// Play the key release sound after a short delay
+						setTimeout(function() {
+							$.ionSound.play('typewriter-keyup');
+						}, 65);
+						$('.output').animate({
+							top: (vmid - (y * ypx)) + 'px',
+							left: (hmid - (x * xpx)) + 'px',
+						}, 50);
+						
+						keydown_mutex = false;
+					}
 				}); // on()
 			}); //$()
 		</script>
@@ -233,16 +244,41 @@
 				Improvements I'd like to make
 			</h2>
 			<ul>
-				<li>Keep the print head centred and move the whole page left as you type.</li>
-				<li>Change the length of the carriage return sound according to the position (ie how far it has to move).</li>
-				<li>Get my head round jQuery.Deferred() or similar so that the keyup sound waits for the keydown sound to finish before playing.</li>
+				<li>Use jQuery.Deferred() or somesuch to delay the keyup sound until the keydown sound has finished.</li>
 				<li>If you type too fast or try to type two keys at once, the mechanism should jam.</li>
-				<li>User-adjustable settings for things like ribbon wear.</li>
+				<li>User-adjustable settings for things like ribbon wear and wibbly-wobbliness.</li>
 				<li>Further suggestions welcome (though remember this is just for fun!) to <a href="mailto:ben@uniqcode.com">ben@uniqcode.com</a></li>
 			</ul>
 			<h2>
+				Credits
+			</h2>
+			<p>
+				Dedicated to Archie. Developed by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
+				<a href="https://github.com/IonDen/ion.sound">IonSound</a>. Typewriter sound effects from <a href="http://freesound.org">Freesound</a> and <a href="http://www.soundjay.com">SoundJay</a>, some of them edited by me. Tested on Firefox27/Mac and Chrome32/Mac. 			
+			</p>
+			<h2>
 				Changelog
 			</h2>
+			<h3>
+				version 1.4 (2014-02-11)
+			</h3>
+			<ul>
+				<li>Move paper on keyup, not keydown.</li>
+				<li>Use a mutex to ensure only one keypress is handled at a time, instead of a timeout (also fixes a long-held key generating two characters).</li>
+				<li>Each character now has a consistent vertical offset (randomly chosen at the start), instead of randomly changing each time.</li>
+				<li>Drop shadow on page.</li>
+				<li>Fix page moving too far vertically on CR.</li>
+			</ul>
+			<h3>
+				version 1.3 (2014-02-10)
+			</h3>
+			<ul>
+				<li>The typed character now always appears in the centre of the screen; the "paper" moves.
+  Movement of paper and carriage return are animated.</li>
+				<li>A basic cursor to show where the next character will appear. This could eventually become an animated print head.</li>
+				<li>Wibbly-wobbly text: A small random vertical offset is added to each character (suggested by David Gosnell)</li>
+			</ul>
+
 			<h3>
 				version 1.2 (2014-02-10)
 			</h3>
@@ -265,13 +301,12 @@
 				version 1.0 (2014-02-09)
 			</h3>
 			
-			<p>
-				For Archie. Developed by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
-				<a href="https://github.com/IonDen/ion.sound">IonSound</a>. Typewriter sound effects from <a href="http://freesound.org">Freesound</a> and <a href="http://www.soundjay.com">SoundJay</a>, some of them edited by me. Tested on Firefox27/Mac and Chrome32/Mac. 
-			
-			</p>
 		</div>
 		<div class="output">
+			<div class="page">
+			</div>
+			<div class="page-shadow">
+			</div>
 		</div>
 		<div class="cursor">
 		</div>
