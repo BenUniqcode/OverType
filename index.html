@@ -15,7 +15,7 @@
 			h3 {
 				font-size: 11pt;
 			}
-			.input {
+			#input {
 				position: absolute;
 				left: -1000px;
 				top: -1000px;
@@ -54,6 +54,7 @@
 		<script type="text/javascript">
 			const bell_width = 69;
 			const max_width = 80;
+			const tab_width = 8;
 			const colour_variation = 90;
 			const unshifted = {
 			   59: ';',
@@ -92,7 +93,7 @@
 				222: '"',
 			};
 			const xpx = 12, ypx = 21;
-			var x = 1, y = 3, backspaces = 0;
+			var x = 0, y = 0, backspaces = 0;
 			var timeout;
 			var vmid = $(window).height() / 2;
 			var hmid = $(window).width() / 2;
@@ -121,7 +122,7 @@
 					$.ionSound.play('typewriter-carriage-return');
 					$('.output').append('<br/>');
 					line_length = x;
-					x = 1;
+					x = 0;
 					backspaces = 0;
 					y++;
 					return_time = 13 * line_length;
@@ -140,44 +141,74 @@
 						x--;
 						backspaces++;
 						$.ionSound.play('typewriter-spacebar');
-					}
-				} else {
-					if (key == 32) { // space
-						$.ionSound.play('typewriter-spacebar');
-					} else if (x == bell_width) {
-						$.ionSound.play('typewriter-bell-2');
-					} else {
-						$.ionSound.play('typewriter-keydown');
-					}
-					var char = String.fromCharCode(key);
+					} 
+					return false;
+				} 
+				if (key == 9) { // tab
+					e.preventDefault(); // Don't lose focus
+					$.ionSound.play('typewriter-spacebar');
 					if (e.shiftKey) {
-						if (char.match(/[A-Za-z]/)) {
-							char = char.toUpperCase();
-						} else if (shifted[key]) {
-							char = shifted[key];
-						} else {
-							char = '&nbsp;';
+						var prev_tab_stop = (x % tab_width);
+						if (prev_tab_stop == 0) {
+							prev_tab_stop = tab_width;
+						} 
+						if (x - prev_tab_stop < 0) {
+							prev_tab_stop = x;
 						}
-					} else if (char.match(/[A-Za-z0-9]/)) {
-						char = char.toLowerCase();
-					} else if (unshifted[key]) {
-						char = unshifted[key];
+						x -= prev_tab_stop; 
+						backspaces += prev_tab_stop;
+					} else {
+						var next_tab_stop = tab_width - (x % tab_width);
+						if (next_tab_stop == 0) {
+							next_tab_stop = tab_width;
+						} else if (x + next_tab_stop > max_width) {
+							next_tab_stop = max_width - x;
+						}
+						x += next_tab_stop;
+						char = Array(next_tab_stop + 1).join('&nbsp;');
+						$('.output').append('<span style="position: relative; left: -' + (backspaces * 0.6) + 'em;">' + char + '</span>');
+					}
+					move_page();
+					return false;
+				}
+				if (key == 32) { // space
+					$.ionSound.play('typewriter-spacebar');
+				} else if (x == bell_width) {
+					$.ionSound.play('typewriter-bell-2');
+				} else {
+					$.ionSound.play('typewriter-keydown');
+				}
+				var char = String.fromCharCode(key);
+				if (e.shiftKey) {
+					if (char.match(/[A-Za-z]/)) {
+						char = char.toUpperCase();
+					} else if (shifted[key]) {
+						char = shifted[key];
 					} else {
 						char = '&nbsp;';
 					}
-					// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
-					var intensity = Math.floor((Math.random() * colour_variation));
-					var color = 'rgb(' + intensity + ',' + intensity + ',' + intensity + ')';
-					// Vertical offset
-					if (! voffset[char]) {
-						voffset[char] = Math.round((Math.random() * 2.0) - 1.0);
-					}
-					$('.output').append('<span style="position: relative; top: ' + voffset[char] + 'px; left: -' + (backspaces * 0.6) + 'em; color: ' + color + ';">' + char + '</span>')
-					if (x < max_width) {
-						x++;
-					} else {
-						backspaces++; // Fudge hard right margin without position:absolute
-					}
+				} else if (char.match(/[A-Za-z0-9]/)) {
+					char = char.toLowerCase();
+				} else if (unshifted[key]) {
+					char = unshifted[key];
+				} else {
+					char = '&nbsp;';
+				}
+				
+				// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
+				var intensity = Math.floor((Math.random() * colour_variation));
+				var color = 'rgb(' + intensity + ',' + intensity + ',' + intensity + ')';
+				// Vertical offset
+				if (! voffset[char]) {
+					voffset[char] = Math.round((Math.random() * 2.0) - 1.0);
+				}
+				
+				$('.output').append('<span style="position: relative; top: ' + voffset[char] + 'px; left: -' + (backspaces * 0.6) + 'em; color: ' + color + ';">' + char + '</span>');
+				
+				if (x < max_width) {
+					x++;
+				} else {
+					backspaces++; // Fudge hard right margin without position:absolute
 				}
 				return false;
 			}
@@ -191,7 +222,7 @@
 
 			$(function() {
 				move_page();
-				$('.cursor').css('top', vmid + ypx + 12).css('left', hmid + 30);
+				$('.cursor').css('top', vmid + ypx + 75).css('left', hmid + 43);
 				$.ionSound({
 					path: "assets/typewriter_sounds/",
     			sounds: [
@@ -203,8 +234,14 @@
     			],
     			multiPlay: true,
 				});
-				$('.input').val('').trigger('focus')
-				.on('blur', function(e) { e.preventDefault(); $(this).trigger('focus'); })
+				$('#input').val('').trigger('focus')
+				.on('blur', function(e) { 
+				  // A small delay seems to be necessary before forcing the focus back
+				  e.preventDefault();
+					setTimeout(function() {
+						$('#input').trigger('focus'); 
+					}, 20); 
+				})
 				.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
 					handle_keypress(e); 
 				})
@@ -228,7 +265,7 @@
 		</script>
 	</head>
 	<body>
-		<textarea class="input">
+		<textarea id="input">
 		</textarea>
 		<h1 style="margin-bottom: 0">Ben's Super-Realistic* Typewriter Simulator</h1>
 		<p style="margin-top: 0"><small>* Neither realism nor superness guaranteed</small></p>
@@ -257,15 +294,13 @@
 				<ul>
 				<li>Make sure you have your sound turned on for the fully-immersive experience!</li>
 				<li>Just start typing (all this informational text will disappear to give you more space).</li>
-				<li>Don't click on the page or it may stop working.</li>
-				<li>If it stops working just reload the page.</li>
+				<li>If it stops working or to see this text again, just reload the page.</li>
 				</ul>
 			</div>
 			<h2>
 				Improvements I'd like to make
 			</h2>
 			<ul>
-				<li>Use jQuery.Deferred() or somesuch to delay the keyup sound until the keydown sound has finished.</li>
 				<li>If you type too fast or try to type two keys at once, the mechanism should jam.</li>
 				<li>User-adjustable settings for things like ribbon wear and wibbly-wobbliness.</li>
 				<li>Further suggestions welcome (though remember this is just for fun!) to <a href="mailto:ben@uniqcode.com">ben@uniqcode.com</a></li>
@@ -281,6 +316,13 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.7 (2014-02-11)
+				</h3>
+				<ul>
+					<li>Prevent the hidden textarea from losing focus. It should now be safe to click anywhere on the page.</li>
+					<li>Implemented tab stops every 8 chars - press TAB to jump to the next tab stop, SHIFT-TAB jumps to the previous one.</li>
+				</ul>
 				<h3>
 					version 1.6 (2014-02-11)
 				</h3>
