@@ -8,6 +8,13 @@
 				font-family: Helvetica, sans-serif;
 				font-size: 10pt;
 				background-color: #eee;
+				margin: 0;
+			}
+			h1 {
+				margin: 0;
+				font-family: Courier, "Courier New", monospace;
+				font-weight: normal;
+				font-size: 32px;
 			}
 			h2 {
 				font-size: 12pt;
@@ -20,6 +27,24 @@
 				left: -1000px;
 				top: -1000px;
 			}
+			.topbar {
+				position: absolute;
+				top: 0;
+				left: 0;
+				background-color: #aaa;
+				z-index: 5;
+				padding: 1ex 2% 0 1%;
+				height: 10ex;
+				width: 97%;
+			}
+			.info {
+				position: absolute;
+				top: 6em;
+				padding: 1em;
+				width: 70%;
+				margin-left: auto;
+				margin-right: auto;
+			}
 			.instruct {
 				font-size: 20pt;
 				color: #666;
@@ -28,41 +53,62 @@
 				font-family: Courier, "Courier New", monospace;
 				font-size: 20px;
 				line-height: 30px;
-				position: relative;
+				position: absolute;
 				left: 5em;
 				top: 3em;
 				margin-bottom: 2em;
-				width: 50em;
+				width: 48em;
 				height: 120ex;
 				background-color: white;
 				border: 1px solid black;
 				padding: 8ex 2em;
 				box-shadow: 8px 8px 4px #888;
 				white-space: nowrap;
+				z-index: 2;
 				display: none;
 			}
 			.cursor {
 				position: absolute;
-				z-index: 999;
+				z-index: 3;
 				width: 12px;
 				height: 20px;
 				border-bottom: 2px solid red;
 				display: none;
+			}
+			.title {
+				float: left;
+			}
+			.controls {
+				margin: 0 1em;
+				float: right;
+			}
+			.control {
+				float: left;
+				width: 140px;
+				margin: 0 1ex;
+			}
+			.control p {
+				margin: 0 0 8px 0;
+				text-align: center;
 			}
 		</style>
 		<style type="text/css" media="print">
 			.cursor, .title, .instruct, #input { display: none }
 			.output { left: 0 !important; top: 0 !important; box-shadow: none; border: none; padding: 10ex 0 0 0; }			
 		</style>
+		<!-- jQuery -->
 		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
 		<script type="text/javascript">window.jQuery || document.write( '<script type="text/javascript" src="assets/ion_sound_1.3.0/js/vendor/jquery-1.10.2.min.js"><\/script>' )</script>
+		<!-- jQuery-UI -->
+		<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css" />
+		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>		
+		<!-- ION.Sound -->
 		<script type="text/javascript" src="assets/ion_sound_1.3.0/js/ion-sound/ion.sound.min.js"></script>
+		
 		<script type="text/javascript">
 			const bell_width = 69;
 			const max_width = 80;
 			const tab_width = 8;
-			const ribbon_lifetime = 800;
-			const ink_variation = 0.3;
 			const unshifted = {
 			   59: ';',
 				 61: '=',
@@ -101,20 +147,33 @@
 			};
 			const xpx = 12, ypx = 30;
 			const margin_top = 40, margin_left = 30;
-			var x = 0, y = 0; // current offset position in pixels from top-left of printable space
+			var x = max_width * xpx / 2;
+			var y = 0;
 			var backspaces = 0;
 			var vmid = $(window).height() / 2;
 			var hmid = $(window).width() / 2;
 			var voffset = {};
+			var broken = {};
 			var keydown_mutex = false;
 			var shift_mutex = false;
-			var chars_typed = 0;
-			
-			function handle_keypress(e) {
+			var brokenness = 20;
+			var ink_remaining = 400;
+			var ink_variation = 0.3;
+			var started = false;
+
+			function start() {			
 				$('.info').hide();
-				$('.output').show();
-				$('.cursor').show();
+				$('.output, .cursor, .controls').show();
+				started = true;
+			}
+			
+			function handle_keypress(e) {	
+				if (! started) {
+					start();
+				}
 				key = e.which;
+				nosound = false;
+
 				if (key == 16) { // shift
 					if (shift_mutex) {
 						return false;
@@ -203,34 +262,64 @@
 				if (e.shiftKey) {
 					if (c.match(/[A-Za-z]/)) {
 						c = c.toUpperCase();
-						chars_typed++;
+						ink_remaining--;
 					} else if (shifted[key]) {
 						c = shifted[key];
-						chars_typed++;
+						ink_remaining--;
 					} else {
 						c = '&nbsp;';
 					}
 				} else if (c.match(/[A-Za-z0-9]/)) {
 					c = c.toLowerCase();
-					chars_typed++;
+					ink_remaining--;
 				} else if (unshifted[key]) {
 					c = unshifted[key];
-					chars_typed++;
+					ink_remaining--;
 				} else {
 					c = '&nbsp;';
 				}
 				
 				// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
-				var ink_level = (chars_typed < ribbon_lifetime) ? 1.0 - (chars_typed / ribbon_lifetime) - ink_variation + Math.random() * ink_variation : 0;
+				var ink_level = (ink_remaining > 0) ? ink_remaining / 400 - ink_variation + Math.random() * ink_variation : 0;
 				var color = 'rgba(0, 0, 0, ' + ink_level + ')';
-				
+								
 				// Vertical offset
 				if (! (c in voffset)) {
 					voffset[c] = Math.round((Math.random() * 1.5) - 0.75);
 				}
 				
-				// Output the character
-				$('.output').append('<div style="position: absolute; top: ' + (y + voffset[c] + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: ' + color + ';">' + c + '</div>');
+				extra_offset = 0;
+				// Extra offset if highly broken
+				if (brokenness > 50) {
+					extra_offset = Math.random() * brokenness / 25 - 1;
+					if (voffset[c] < 0) {
+						extra_offset = -extra_offset;
+					}
+				}
+				
+				// If brokenness >75%, let some keys be permanently broken.
+				// The chance of a key being broken increases with brokenness; once broken, it remains so until brokenness is reduced
+				// below 75% whereupon they are all fixed.
+				if (brokenness > 75) {
+					// Randomly break keys with a likelihood and a maximum number of broken keys that depend on the brokenness level
+					if (c != '&nbsp;' && (broken[c] || (Math.random() * brokenness > 75 && Math.random() < 0.5 && Object.keys(broken).length < (brokenness - 75) / 5))) { 
+						if (Math.random() > 0.7) {
+							broken[c] = '&#9608;'; // full block - as if the embossed character has fallen off the arm.
+						} else {
+							broken[c] = '&nbsp;'; // as if the key doesn't work at all
+							nosound = true;
+						}
+					}
+				} else {
+					broken = {};
+				}
+
+				// Output the character, unless it's broken
+				if (broken[c]) {
+					$('.output').append('<div style="position: absolute; top: ' + (y + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: ' + color + ';">' + broken[c] + '</div>');
+				} else {
+					$('.output').append('<div style="position: absolute; top: ' + (y + voffset[c] + extra_offset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: ' + color + ';">' + c + '</div>');
+				}
 				
 				if ((x / xpx) < max_width) {
 					x += xpx;
@@ -242,9 +331,12 @@
 					$.ionSound.play('typewriter-bell-2');
 				} else if (key == 32 || key == 39) { // space, right-arrow
 					$.ionSound.play('typewriter-spacebar');
-				} else {
+				} else if (! nosound) {
 					$.ionSound.play('typewriter-keydown');
-				}
+				} 
+
+				// Update ink level slider
+				$('#ctrl_inklevel').slider('option', 'value', ink_remaining);
 
 				return false;
 			}
@@ -257,8 +349,27 @@
 			}
 
 			$(function() {
+				// Sliders
+				$('#ctrl_brokenness').slider({
+					min: 0,
+					max: 100,
+					value: brokenness,
+					change: function() {
+						brokenness = $(this).slider('option', 'value');
+						ink_variation = 1.0 * brokenness / 100;
+					},
+				});
+				$('#ctrl_inklevel').slider({
+					min: 0,
+					max: 1600,
+					value: ink_remaining,
+					change: function() {
+						ink_remaining = $(this).slider('option', 'value');
+					},
+				});
+				
 				move_page();
-				$('.cursor').css('top', vmid + ypx + margin_top + 50).css('left', hmid + 39); // Magic numbers basically arrived at by trial and error...
+				$('.cursor').css('top', vmid + 46).css('left', hmid + 32); // Magic numbers basically arrived at by trial and error...
 				$.ionSound({
 					path: "assets/typewriter_sounds/",
     			sounds: [
@@ -303,16 +414,35 @@
 	<body>
 		<textarea id="input">
 		</textarea>
-		<div class="title">
-			<h1 style="margin-bottom: 0">Ben's Super-Realistic* Typewriter Simulator</h1>
-			<p style="margin-top: 0"><small>* Neither realism nor superness guaranteed</small></p>
-		</div>
+		<div class="topbar">
+			<div class="title">
+				<h1 style="margin-bottom: 0">Ben's Super-Realistic* Typewriter Simulator</h1>
+				<p style="margin-top: 0"><small>* Neither realism nor superness guaranteed</small></p>
+			</div>
+			<div class="controls">
+				<div class="control">
+					<p>
+						Brokenness
+					</p>
+					<div class="slider" id="ctrl_brokenness">
+					</div>
+				</div>
+				<div class="control">
+					<p>
+						Ribbon inkiness
+					</p>
+					<div class="slider" id="ctrl_inklevel">
+					</div>
+				</div>
+			</div>
+		</div><!-- /topbar -->
+		
 		<div class="info">
 			<h2>
 				Why?
 			</h2>
 			<p>
-				All the existing typewriter simulators that I've found on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed, just like a computer. On a real typewriter, backspace
+				All the existing typewriter simulators that I've found on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed, like a computer. On a real typewriter, backspace
 				simply moves the carriage back one space, allowing you to overtype a previously typed character; so I have implemented
 				it this way. If you want to erase a character, you need Tipp-Ex. (NB I do not advise using Tipp-Ex on your monitor). 
 			</p>
@@ -320,7 +450,7 @@
 				Yeah, but... WHY?
 			</h2>
 			<p>
-				Because it's a fun thing to play with and also an interesting little development project - there's more of a challenge to the implementation than you might expect...
+				Because it's a fun thing to play with and also an interesting little development project - there's more of a challenge to the implementation than you might expect... 
 			</p>
 			<noscript>
 				<p style="font-size: 36px">
@@ -332,11 +462,17 @@
 			</h2>
 			<div class="instruct">
 				<ul>
-				<li>Make sure you have your sound turned on for the fully-immersive experience!</li>
-				<li>Just start typing (all this informational text will disappear to give you more space).</li>
-				<li>If it stops working or to see this text again, just reload the page.</li>
+					<li>Make sure you have your sound turned on for the fully-immersive experience!</li>
+					<li>If it stops working or to see this text again, just reload the page.</li>
+					<li>Ready? Just start typing, or click here if you prefer: <button style="font-size: large" onclick="start()">START!</button></li>
 				</ul>
 			</div>
+			<h2>
+				Sliders
+			</h2>
+			<p>
+				Try out the sliders at the top of the screen. The ribbon ink reduces linearly, which is not how a real typewriter would work but gives a more pleasing result. The "brokenness" controls how uneven the vertical alignment and ink density are, and higher settings cause keys to start breaking (once a particular key has broken, it will never work again until you reduce the brokenness back down).
+			</p>
 			<h2>
 				Known bugs
 			</h2>
@@ -347,8 +483,8 @@
 				Improvements I'd like to make
 			</h2>
 			<ul>
-				<li>If you type too fast or try to type two keys at once, the mechanism should jam.</li>
-				<li>User-adjustable settings for things like ribbon wear and wibbly-wobbliness.</li>
+				<li>If you type too fast or try to type two keys at once, the mechanism should jam. Amazingly, this is the most commonly requested feature from the early testers of this program. The only reason I haven't implemented it is the problem of designing a UI to represent unjamming it by picking the mechanism apart.</li>
+				<li>Provide virtual Tipp-Ex.</li>
 				<li>Further suggestions welcome (though remember this is just for fun!) to <a href="mailto:ben@uniqcode.com">ben@uniqcode.com</a></li>
 			</ul>
 			<h2>
@@ -362,6 +498,15 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.13 (2014-02-12)
+				</h3>
+				<ul>
+					<li>Sliders to control brokenness and inkiness.</li>
+					<li>A high brokenness setting results in more wobbly and unevenly-inked text. Above 75%, the keys start to randomly break as you type, either failing to work at all (broken armature) or occasionally printing a solid block (armature works but letter has fallen off). A broken key never recovers until the brokenness is reduced back below this threshold, which unbreaks all of them.</li>
+					<li>The inkiness slider also monitors your current ink level - ie it reduces as you type.</li>
+					<li>Start from the centre of the top line of the page, instead of the top-left.</li>
+				</ul>
 				<h3>
 					version 1.12 (2014-02-12)
 				</h3>
