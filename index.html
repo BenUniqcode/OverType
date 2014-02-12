@@ -38,6 +38,7 @@
 				border: 1px solid black;
 				padding: 8ex 2em;
 				box-shadow: 8px 8px 4px #888;
+				white-space: nowrap;
 				display: none;
 			}
 			.cursor {
@@ -61,7 +62,7 @@
 			const max_width = 80;
 			const tab_width = 8;
 			const ribbon_lifetime = 800;
-			const colour_variation = 75;
+			const ink_variation = 0.3;
 			const unshifted = {
 			   59: ';',
 				 61: '=',
@@ -151,9 +152,9 @@
 					} 
 					return false;
 				} 
+				oldx = x;
 				if (key == 9) { // tab
 					e.preventDefault(); // Don't lose focus
-					$.ionSound.play('typewriter-spacebar');
 					if (e.shiftKey) {
 						var prev_tab_stop = (x % tab_width);
 						if (prev_tab_stop == 0) {
@@ -175,13 +176,18 @@
 						char = Array(next_tab_stop + 1).join('&nbsp;');
 						$('.output').append('<span style="position: relative; left: -' + (backspaces * 0.6) + 'em;">' + char + '</span>');
 					}
+					if (oldx < bell_width && x >= bell_width) {
+						$.ionSound.play('typewriter-bell-2');
+					}	else {				
+						$.ionSound.play('typewriter-spacebar');
+					}
 					move_page();
 					return false;
 				}
-				if (key == 32) { // space
-					$.ionSound.play('typewriter-spacebar');
-				} else if (x == bell_width) {
+				if (x == bell_width) {
 					$.ionSound.play('typewriter-bell-2');
+				} else if (key == 32) { // space
+					$.ionSound.play('typewriter-spacebar');
 				} else {
 					$.ionSound.play('typewriter-keydown');
 				}
@@ -207,13 +213,12 @@
 				}
 				
 				// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
-				var ink_depletion = Math.round(255 * (chars_typed / ribbon_lifetime));
-				var greylevel = Math.floor((Math.random() * colour_variation)) + ink_depletion;
-				var color = 'rgb(' + greylevel + ',' + greylevel + ',' + greylevel + ')';
+				var ink_level = (chars_typed < ribbon_lifetime) ? 1.0 - (chars_typed / ribbon_lifetime) - ink_variation + Math.random() * ink_variation : 0;
+				var color = 'rgba(0, 0, 0, ' + ink_level + ')';
 				
 				// Vertical offset
 				if (! (c in voffset)) {
-					voffset[c] = Math.round((Math.random() * 2.0) - 1.0);
+					voffset[c] = Math.round((Math.random() * 1.5) - 0.75);
 				}
 				
 				// Output the character
@@ -305,7 +310,9 @@
 					<b>You need to <a href="http://enable-javascript.com">enable Javascript in your browser</a> for this to work.</b>
 				</p>
 			</noscript>
-			<h2>Instructions</h2>
+			<h2>
+				Instructions
+			</h2>
 			<div class="instruct">
 				<ul>
 				<li>Make sure you have your sound turned on for the fully-immersive experience!</li>
@@ -313,6 +320,12 @@
 				<li>If it stops working or to see this text again, just reload the page.</li>
 				</ul>
 			</div>
+			<h2>
+				Known bugs
+			</h2>
+			<ul>
+				<li>On Safari, the sounds are not synchronised. This is a Safari issue, and there doesn't seem to be anything I can do about it. Use Firefox or Chrome instead.</li>
+			</ul>
 			<h2>
 				Improvements I'd like to make
 			</h2>
@@ -325,13 +338,23 @@
 				Credits
 			</h2>
 			<p>
-				Dedicated to Archie. Developed by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
+				For Archie. Developed by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
 				<a href="https://github.com/IonDen/ion.sound">IonSound</a>. Typewriter sound effects from <a href="http://freesound.org">Freesound</a> and <a href="http://www.soundjay.com">SoundJay</a>, some of them edited by me. Tested on Firefox27/Mac and Chrome32/Mac. 			
 			</p>
 			<h2>
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.11 (2014-02-12)
+				</h3>
+				<ul>
+					<li>Change alpha level instead of colour to vary ink level. This seems to look more realistic and also means that
+					if you overtype characters they get darker as they should.</li>
+					<li>Reduce the likelihood of characters having vertical offset (while keeping the range the same at +/- 1px).</li> 
+					<li>Play the CR bell for tabs and spaces as well as normal keys.</li>
+					<li>Fix lines sometimes wrapping if you overtype a lot after a lot of backspaces.</li>
+				</ul>
 				<h3>
 					version 1.10 (2014-02-11)
 				</h3>
