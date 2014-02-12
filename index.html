@@ -28,7 +28,7 @@
 				font-family: Courier, "Courier New", monospace;
 				font-size: 20px;
 				line-height: 30px;
-				position: absolute;
+				position: relative;
 				left: 5em;
 				top: 3em;
 				margin-bottom: 2em;
@@ -44,9 +44,9 @@
 			.cursor {
 				position: absolute;
 				z-index: 999;
-				width: 10px;
-				height: 2px;
-				background-color: red;
+				width: 12px;
+				height: 20px;
+				border-bottom: 2px solid red;
 				display: none;
 			}
 		</style>
@@ -100,7 +100,9 @@
 				222: '"',
 			};
 			const xpx = 12, ypx = 30;
-			var x = 0, y = 0, backspaces = 0;
+			const margin_top = 40, margin_left = 30;
+			var x = 0, y = 0; // current offset position in pixels from top-left of printable space
+			var backspaces = 0;
 			var vmid = $(window).height() / 2;
 			var hmid = $(window).width() / 2;
 			var voffset = {};
@@ -129,24 +131,38 @@
 					e.preventDefault();
 					$.ionSound.play('typewriter-carriage-return');
 					$('.output').append('<br/>');
-					line_length = x;
+					line_length = x / xpx;
 					x = 0;
 					backspaces = 0;
-					y++;
+					y += ypx;
 					return_time = 13 * line_length;
 					$('.output').animate({
-						top: (vmid - (y * ypx)) + 'px',
+						top: (vmid - y) + 'px',
 					}, 100).animate({
-						left: (hmid - (x * xpx)) + 'px',
+						left: (hmid - x) + 'px',
 					}, return_time, function() {
 						// Stop playing the sound when the animation completes
 						$.ionSound.stop('typewriter-carriage-return');
 					}); 
 					return false;
 				}
-				if (key == 8) { // backspace
-					if (x > 1) {
-						x--;
+				if (key == 38) { // up-arrow
+					if (y > 0) {
+						y -= (ypx / 4);
+						$.ionSound.play('typewriter-spacebar');
+						move_page();
+					}
+					return false;
+				}
+				if (key == 40) { // down-arrow
+					$.ionSound.play('typewriter-spacebar');
+					y += (ypx / 4);
+					move_page();
+					return false;
+				}
+				if (key == 8 || key == 37) { // backspace, left-arrow
+					if (x > 0) {
+						x -= xpx;
 						backspaces++;
 						$.ionSound.play('typewriter-spacebar');
 					} 
@@ -156,27 +172,25 @@
 				if (key == 9) { // tab
 					e.preventDefault(); // Don't lose focus
 					if (e.shiftKey) {
-						var prev_tab_stop = (x % tab_width);
+						var prev_tab_stop = ((x / xpx) % tab_width);
 						if (prev_tab_stop == 0) {
 							prev_tab_stop = tab_width;
 						} 
-						if (x - prev_tab_stop < 0) {
+						if ((x / xpx) - prev_tab_stop < 0) {
 							prev_tab_stop = x;
 						}
-						x -= prev_tab_stop; 
+						x -= (prev_tab_stop * xpx); 
 						backspaces += prev_tab_stop;
 					} else {
-						var next_tab_stop = tab_width - (x % tab_width);
+						var next_tab_stop = tab_width - ((x / xpx) % tab_width);
 						if (next_tab_stop == 0) {
 							next_tab_stop = tab_width;
-						} else if (x + next_tab_stop > max_width) {
-							next_tab_stop = max_width - x;
+						} else if ((x / xpx) + next_tab_stop > max_width) {
+							next_tab_stop = max_width - (x / xpx);
 						}
-						x += next_tab_stop;
-						char = Array(next_tab_stop + 1).join('&nbsp;');
-						$('.output').append('<span style="position: relative; left: -' + (backspaces * 0.6) + 'em;">' + char + '</span>');
+						x += (next_tab_stop * xpx);
 					}
-					if (oldx < bell_width && x >= bell_width) {
+					if ((oldx / xpx) < bell_width && (x / xpx) >= bell_width) {
 						$.ionSound.play('typewriter-bell-2');
 					}	else {				
 						$.ionSound.play('typewriter-spacebar');
@@ -184,13 +198,7 @@
 					move_page();
 					return false;
 				}
-				if (x == bell_width) {
-					$.ionSound.play('typewriter-bell-2');
-				} else if (key == 32) { // space
-					$.ionSound.play('typewriter-spacebar');
-				} else {
-					$.ionSound.play('typewriter-keydown');
-				}
+
 				var c = String.fromCharCode(key);
 				if (e.shiftKey) {
 					if (c.match(/[A-Za-z]/)) {
@@ -222,26 +230,35 @@
 				}
 				
 				// Output the character
-				$('.output').append('<span style="position: relative; top: ' + voffset[c] + 'px; left: -' + (backspaces * 0.6) + 'em; color: ' + color + ';">' + c + '</span>');
+				$('.output').append('<div style="position: absolute; top: ' + (y + voffset[c] + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: ' + color + ';">' + c + '</div>');
 				
-				if (x < max_width) {
-					x++;
+				if ((x / xpx) < max_width) {
+					x += xpx;
 				} else {
 					backspaces++; // Fudge hard right margin without position:absolute
 				}
+				
+				if ((oldx / xpx) < bell_width && (x / xpx) >= bell_width) {
+					$.ionSound.play('typewriter-bell-2');
+				} else if (key == 32 || key == 39) { // space, right-arrow
+					$.ionSound.play('typewriter-spacebar');
+				} else {
+					$.ionSound.play('typewriter-keydown');
+				}
+
 				return false;
 			}
 			
 			function move_page() {
 				$('.output').animate({
-					top: (vmid - (y * ypx)) + 'px',
-					left: (hmid - (x * xpx)) + 'px',
+					top: (vmid - y) + 'px',
+					left: (hmid - x) + 'px',
 				}, 20);
 			}
 
 			$(function() {
 				move_page();
-				$('.cursor').css('top', vmid + ypx + 70).css('left', hmid + 43);
+				$('.cursor').css('top', vmid + ypx + margin_top + 50).css('left', hmid + 39); // Magic numbers basically arrived at by trial and error...
 				$.ionSound({
 					path: "assets/typewriter_sounds/",
     			sounds: [
@@ -345,6 +362,13 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.12 (2014-02-12)
+				</h3>
+				<ul>
+					<li>Cursor key support. Left and right are the same as backspace and space. Up and down feed the paper by a quarter of a line height at a time.</li>
+					<li>Use a position:absolute div for each character within position:relative output block. I had hoped this would allow me to do away with the input textarea altogether and bind the key handlers to $(document), but alas even with preventDefault(), some keypresses were still occasionally being passed through to the browser, causing it to scroll (space), go back a page (backspace) etc. Still, this way of positioning seems more flexible so I kept it.</li>
+				</ul>
 				<h3>
 					version 1.11 (2014-02-12)
 				</h3>
