@@ -160,6 +160,7 @@
 			var ink_remaining = 400;
 			var ink_variation = 0.3;
 			var started = false;
+			var redshift = false;
 
 			function start() {			
 				$('.info').hide();
@@ -182,6 +183,11 @@
 					shift_mutex = true;
 					return false;
 				} 
+				if (key == 18) { // alt = red-shift
+					$.ionSound.play('typewriter-spacebar');
+					redshift = true;
+					return false;
+				}				
 				if (keydown_mutex) {
 					return false;
 				}
@@ -281,7 +287,6 @@
 				
 				// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
 				var ink_level = (ink_remaining > 0) ? ink_remaining / 400 - ink_variation + Math.random() * ink_variation : 0;
-				var color = 'rgba(0, 0, 0, ' + ink_level + ')';
 								
 				// Vertical offset
 				if (! (c in voffset)) {
@@ -316,9 +321,23 @@
 
 				// Output the character, unless it's broken
 				if (broken[c]) {
-					$('.output').append('<div style="position: absolute; top: ' + (y + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: ' + color + ';">' + broken[c] + '</div>');
+					$('.output').append('<div style="position: absolute; top: ' + (y + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + ');">' + broken[c] + '</div>');
 				} else {
-					$('.output').append('<div style="position: absolute; top: ' + (y + voffset[c] + extra_offset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: ' + color + ';">' + c + '</div>');
+					// If any part of the char is to be in red, print the whole char in red first, then overprint part of it in black
+					var black_height_style = '';
+					if (redshift) {
+						$('.output').append('<div style="position: absolute; top: ' + (y + voffset[c] + extra_offset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(255, 0, 0, ' + ink_level + '); overflow: hidden; z-index: 99">' + c + '</div>');
+						black_height = 0;
+						if (Math.random() < brokenness / 100) {
+							black_height = Math.round(Math.random() * ypx * brokenness / 100);
+						} else {
+							black_height = 0;
+						}
+						black_height_style = 'height: ' + black_height + 'px; '
+					} else {
+						black_height_style = '';
+					}
+					$('.output').append('<div style="position: absolute; top: ' + (y + voffset[c] + extra_offset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + '); ' + black_height_style + 'overflow: hidden; z-index: 100">' + c + '</div>');
 				}
 				
 				if ((x / xpx) < max_width) {
@@ -406,7 +425,10 @@
 					} else if (shift_mutex && e.which == 16 && ! e.shiftKey) {
 						$.ionSound.play('typewriter-keyup');
 						shift_mutex = false;
-					}						
+					}	else if (redshift && e.which == 18) {
+						$.ionSound.play('typewriter-keyup');
+						redshift = false;
+					}					
 				}); // on()
 			}); //$()
 		</script>
@@ -498,6 +520,12 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.14 (2014-02-12)
+				</h3>
+				<ul>
+					<li>2-colour ribbon. Hold [alt] to type red characters. Sometimes these will randomly be only partially red, to simulate failing to press the colour shift key hard enough. The frequency and amount of this failure is affected by the Brokenness control.</li>
+				</ul>
 				<h3>
 					version 1.13 (2014-02-12)
 				</h3>
