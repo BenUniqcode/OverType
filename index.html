@@ -91,6 +91,10 @@
 				margin: 0 0 8px 0;
 				text-align: center;
 			}
+			.control .disp {
+				margin: 4px 0 0 0;
+				text-align: center;
+			}
 		</style>
 		<style type="text/css" media="print">
 			.cursor, .title, .instruct, #input { display: none }
@@ -290,24 +294,28 @@
 								
 				// Vertical offset
 				if (! (c in voffset)) {
-					voffset[c] = Math.round((Math.random() * 1.5) - 0.75);
+					voffset[c] = {
+						threshold: Math.floor(Math.random() * 99) + 1, // 1..99
+						direction: Math.floor(Math.random() * 3) - 1, // -1..+1
+					}						
 				}
 				
 				extra_offset = 0;
 				// Extra offset if highly broken
-				if (brokenness > 50) {
-					extra_offset = Math.random() * brokenness / 25 - 1;
-					if (voffset[c] < 0) {
-						extra_offset = -extra_offset;
-					}
+				extra_offset = Math.floor(Math.random() * brokenness / 25); // 0 at b<50, 0..1 at 50<=b<75, 0..2 at b>=75
+				if (voffset[c].direction < 0) {
+					extra_offset = -extra_offset;
 				}
+				
+				this_voffset = (voffset[c].threshold <= brokenness) ? Math.round(voffset[c].direction * brokenness / 33) : 0;
+				this_voffset += extra_offset;
 				
 				// If brokenness >75%, let some keys be permanently broken.
 				// The chance of a key being broken increases with brokenness; once broken, it remains so until brokenness is reduced
 				// below 75% whereupon they are all fixed.
 				if (brokenness > 75) {
 					// Randomly break keys with a likelihood and a maximum number of broken keys that depend on the brokenness level
-					if (c != '&nbsp;' && (broken[c] || (Math.random() * brokenness > 75 && Math.random() < 0.5 && Object.keys(broken).length < (brokenness - 75) / 5))) { 
+					if (c != '&nbsp;' && (broken[c] || (Math.random() * brokenness > 70 && Math.random() < 0.4 && Object.keys(broken).length < (brokenness - 75) / 5))) { 
 						if (Math.random() > 0.7) {
 							broken[c] = '&#9608;'; // full block - as if the embossed character has fallen off the arm.
 						} else {
@@ -326,7 +334,7 @@
 					// If any part of the char is to be in red, print the whole char in red first, then overprint part of it in black
 					var black_height_style = '';
 					if (redshift) {
-						$('.output').append('<div style="position: absolute; top: ' + (y + voffset[c] + extra_offset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(255, 0, 0, ' + ink_level + '); overflow: hidden; z-index: 99">' + c + '</div>');
+						$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(255, 0, 0, ' + ink_level + '); overflow: hidden; z-index: 99">' + c + '</div>');
 						black_height = 0;
 						if (Math.random() < brokenness / 100) {
 							black_height = Math.round(Math.random() * ypx * brokenness / 100);
@@ -337,7 +345,7 @@
 					} else {
 						black_height_style = '';
 					}
-					$('.output').append('<div style="position: absolute; top: ' + (y + voffset[c] + extra_offset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + '); ' + black_height_style + 'overflow: hidden; z-index: 100">' + c + '</div>');
+					$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + '); ' + black_height_style + 'overflow: hidden; z-index: 100">' + c + '</div>');
 				}
 				
 				if ((x / xpx) < max_width) {
@@ -354,8 +362,9 @@
 					$.ionSound.play('typewriter-keydown');
 				} 
 
-				// Update ink level slider
+				// Update ink level slider and disp
 				$('#ctrl_inklevel').slider('option', 'value', ink_remaining);
+				$('#disp_inklevel').html(ink_remaining);
 
 				return false;
 			}
@@ -371,21 +380,29 @@
 				// Sliders
 				$('#ctrl_brokenness').slider({
 					min: 0,
-					max: 100,
+					max: 99,
 					value: brokenness,
-					change: function() {
-						brokenness = $(this).slider('option', 'value');
+					slide: function(event, ui) {
+						$('#disp_brokenness').html(ui.value);
+					},						
+					change: function(event, ui) {
+						brokenness = ui.value;
 						ink_variation = 1.0 * brokenness / 100;
 					},
 				});
 				$('#ctrl_inklevel').slider({
 					min: 0,
-					max: 1600,
+					max: 600,
 					value: ink_remaining,
-					change: function() {
-						ink_remaining = $(this).slider('option', 'value');
+					slide: function(event, ui) {
+						$('#disp_inklevel').html(ui.value);
+					},						
+					change: function(event, ui) {
+						ink_remaining = ui.value;
 					},
 				});
+				$('#disp_brokenness').html(brokenness);
+				$('#disp_inklevel').html(ink_remaining);
 				
 				move_page();
 				$('.cursor').css('top', vmid + 46).css('left', hmid + 32); // Magic numbers basically arrived at by trial and error...
@@ -448,12 +465,16 @@
 					</p>
 					<div class="slider" id="ctrl_brokenness">
 					</div>
+					<div class="disp" id="disp_brokenness">
+					</div>
 				</div>
 				<div class="control">
 					<p>
 						Ribbon inkiness
 					</p>
 					<div class="slider" id="ctrl_inklevel">
+					</div>
+					<div class="disp" id="disp_inklevel">
 					</div>
 				</div>
 			</div>
@@ -520,6 +541,25 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.15 (2014-02-15)
+				</h3>
+				<ul>
+
+					<li>A better algorithm for mapping Brokenness to vertical offset.
+					Rather than having a fixed offset for each character, and simply adding more
+					random offset when Brokenness is increased, we now choose an offset and threshold
+					for each character. If Brokenness is above the threshold for that char, it will be
+					offset by its consistent amount. This offset may then be randomly boosted (or not)
+					by 1 or 2px at high Brokenness levels.</li>
+
+					<li>Brokenness now maxes at 99%, given that 100% brokenness would imply being
+					completely non-functional.</li>
+
+					<li>Show the values of the sliders as numbers below them.</li>
+					
+					<li>Reduce max inkiness.</li>
+				</ul>
 				<h3>
 					version 1.14 (2014-02-12)
 				</h3>
