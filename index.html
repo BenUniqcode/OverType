@@ -149,7 +149,7 @@
 				221: '}',
 				222: '"',
 			};
-			const xpx = 12, ypx = 30;
+			const xpx = 12, ypx = 30, char_height = 20;
 			const margin_top = 40, margin_left = 30;
 			var x = max_width * xpx / 2;
 			var y = 0;
@@ -165,6 +165,8 @@
 			var ink_variation = 0.3;
 			var started = false;
 			var redshift = false;
+			var shift_lock = false;
+			var redshift_lock = false;
 
 			function start() {			
 				$('.info').hide();
@@ -179,15 +181,36 @@
 				key = e.which;
 				nosound = false;
 
+				if (key == 20) { // caps lock = lock either shift, colour shift or both
+					// If already locked, unlock
+					if (shift_lock || redshift_lock) {
+						shift_lock = false;
+						redshift_lock = false;
+						$.ionSound.play('typewriter-keyup');
+						return false;
+					}
+					// Otherwise, lock whatever is being held
+					if (e.shiftKey) {
+						shift_lock = true;
+					}
+					if (redshift) {
+						redshift_lock = true;
+					}
+					return false;
+				}
+						
 				if (key == 16) { // shift
-					if (shift_mutex) {
+					if (shift_mutex || shift_lock) {
 						return false;
 					}
 					$.ionSound.play('typewriter-spacebar');
 					shift_mutex = true;
 					return false;
 				} 
-				if (key == 18) { // alt = red-shift
+				if (key == 27) { // esc = red-shift
+					if (redshift_lock) {
+						return false;
+					}
 					$.ionSound.play('typewriter-spacebar');
 					redshift = true;
 					return false;
@@ -240,7 +263,7 @@
 				oldx = x;
 				if (key == 9) { // tab
 					e.preventDefault(); // Don't lose focus
-					if (e.shiftKey) {
+					if (e.shiftKey || shift_lock) {
 						var prev_tab_stop = ((x / xpx) % tab_width);
 						if (prev_tab_stop == 0) {
 							prev_tab_stop = tab_width;
@@ -269,7 +292,7 @@
 				}
 
 				var c = String.fromCharCode(key);
-				if (e.shiftKey) {
+				if (e.shiftKey || shift_lock) {
 					if (c.match(/[A-Za-z]/)) {
 						c = c.toUpperCase();
 						ink_remaining--;
@@ -331,21 +354,37 @@
 				if (broken[c]) {
 					$('.output').append('<div style="position: absolute; top: ' + (y + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + ');">' + broken[c] + '</div>');
 				} else {
-					// If any part of the char is to be in red, print the whole char in red first, then overprint part of it in black
-					var black_height_style = '';
-					if (redshift) {
-						$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(255, 0, 0, ' + ink_level + '); overflow: hidden; z-index: 99">' + c + '</div>');
-						black_height = 0;
+					var black_height = ypx;
+					var black_height_style = '', red_height_style = '';
+					// TODO: Make high brokenness do partial red chars sometimes without redshift
+					//       The relative probabilities of black and red need to be the opposite of what they are for redshift 
+					//       but without reversing the relative positions. voffset also needs to work oppositely.
+					//       I think I need to track the position of the print head relative to the ribbon.
+					if (redshift || redshift_lock) {
 						if (Math.random() < brokenness / 100) {
-							black_height = Math.round(Math.random() * ypx * brokenness / 100);
+							// Colour part of the character black, to simulate not pressing Colour Shift hard enough.
+							// Black height depends on brokenness level and voffset. As the black creeps in from the top,
+							// a char with high negative voffset (shifted upwards) will be more blackened.
+							// +ypx-char_height because that is empty space before the top of the visible character.
+							black_height = Math.floor(Math.random() * ypx * brokenness / 250) + ypx - char_height - this_voffset;
+							if (black_height < 0) {
+								black_height = 0; // All red
+								red_height_style = '';
+							} else {
+								black_height_style = 'clip: rect(0px, ' + xpx + 'px, ' + black_height + 'px, 0px); ';
+								red_height_style   = 'clip: rect(' + black_height + 'px, ' + xpx + 'px, ' + ypx + 'px, 0px); ';
+							}
 						} else {
 							black_height = 0;
+							red_height_style = '';
 						}
-						black_height_style = 'height: ' + black_height + 'px; '
-					} else {
-						black_height_style = '';
+						// Output the (possibly partial) character in red					
+						$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(255, 0, 0, ' + ink_level + '); ' + red_height_style + '">' + c + '</div>');
+					} 
+					if (black_height > 0) {
+						// Output the (possibly partial) character in black
+						$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + '); ' + black_height_style + '">' + c + '</div>');
 					}
-					$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + '); ' + black_height_style + 'overflow: hidden; z-index: 100">' + c + '</div>');
 				}
 				
 				if ((x / xpx) < max_width) {
@@ -405,7 +444,7 @@
 				$('#disp_inklevel').html(ink_remaining);
 				
 				move_page();
-				$('.cursor').css('top', vmid + 46).css('left', hmid + 32); // Magic numbers basically arrived at by trial and error...
+				$('.cursor').css('top', vmid + 46).css('left', hmid + 31); // Magic numbers basically arrived at by trial and error...
 				$.ionSound({
 					path: "assets/typewriter_sounds/",
     			sounds: [
@@ -440,10 +479,14 @@
 							keydown_mutex = false;
 						});
 					} else if (shift_mutex && e.which == 16 && ! e.shiftKey) {
-						$.ionSound.play('typewriter-keyup');
+						if (! shift_lock) {
+							$.ionSound.play('typewriter-keyup');
+						}
 						shift_mutex = false;
-					}	else if (redshift && e.which == 18) {
-						$.ionSound.play('typewriter-keyup');
+					}	else if (redshift && e.which == 27) {
+						if (! redshift_lock) {
+							$.ionSound.play('typewriter-keyup');
+						}
 						redshift = false;
 					}					
 				}); // on()
@@ -514,7 +557,7 @@
 				Sliders
 			</h2>
 			<p>
-				Try out the sliders at the top of the screen. The ribbon ink reduces linearly, which is not how a real typewriter would work but gives a more pleasing result. The "brokenness" controls how uneven the vertical alignment and ink density are, and higher settings cause keys to start breaking (once a particular key has broken, it will never work again until you reduce the brokenness back down).
+				Try out the sliders at the top of the screen. The ribbon ink reduces linearly, which is not how a real typewriter would work but gives a more pleasing result. The "brokenness" controls how uneven the vertical alignment, ink density and colour shift are, and higher settings cause keys to start breaking (once a particular key has broken, it will never work again until you reduce the brokenness back down).
 			</p>
 			<h2>
 				Known bugs
@@ -541,6 +584,15 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.16 (2014-02-18)
+				</h3>
+				<ul>
+					<li>Colour shift is now achieved by holding [esc], as holding [alt] caused unwanted side-effects from the OS acting on the key combo. Make sure the page has fully loaded before you press [esc], as otherwise the browser will interpret it as a "stop loading" command.</li>
+					<li>When colour shift partially "fails", instead of printing the whole character in red and then overprinting part of it in black, which sometimes meant the red was somewhat visible beneath the black part, each part of the character is now clipped so they do not overlap.</li>
+					<li>Improved the algorithm for deciding how often, and by how much, colour shift "fails".</li>
+					<li>Shift, colour shift, or both, can now be locked on by holding them down and pressing caps lock. Press caps lock again to release the lock. Note that unlike a computer's caps lock, a typewriter's shift lock behaves exactly as if shift were held down, so for example number keys produce symbols.</li>
+				</ul>
 				<h3>
 					version 1.15 (2014-02-15)
 				</h3>
