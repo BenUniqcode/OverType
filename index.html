@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="utf-8"> 
-		<title>Ben's Super-Realistic Typewriter Simulator</title>
+		<title>OverType - The Over-The-Top Typewriter Simulator</title>
 		<style type="text/css" media="all">
 			body {
 				font-family: Helvetica, sans-serif;
@@ -13,14 +13,15 @@
 			h1 {
 				margin: 0;
 				font-family: Courier, "Courier New", monospace;
-				font-weight: normal;
-				font-size: 32px;
+				font-weight: bold;
+				font-size: 40px;
 			}
 			h2 {
-				font-size: 12pt;
+				margin-top: 0;
+				font-size: 16px;
 			}
 			h3 {
-				font-size: 11pt;
+				font-size: 14px;
 			}
 			#input {
 				position: absolute;
@@ -110,6 +111,7 @@
 		<script type="text/javascript" src="assets/ion_sound_1.3.0/js/ion-sound/ion.sound.min.js"></script>
 		
 		<script type="text/javascript">
+			// "use strict";
 			const bell_width = 69;
 			const max_width = 80;
 			const tab_width = 8;
@@ -149,8 +151,14 @@
 				221: '}',
 				222: '"',
 			};
+			const alted = {
+				50: '€',
+				51: '#',
+			};
 			const xpx = 12, ypx = 30, char_height = 20;
 			const margin_top = 40, margin_left = 30;
+			const max_brokenness = 99;
+			const max_ink_level = 600;
 			var x = max_width * xpx / 2;
 			var y = 0;
 			var backspaces = 0;
@@ -158,11 +166,12 @@
 			var hmid = $(window).width() / 2;
 			var voffset = {};
 			var broken = {};
-			var keydown_mutex = false;
-			var shift_mutex = false;
 			var brokenness = 20;
 			var ink_remaining = 400;
 			var ink_variation = 0.3;
+			var keydown_mutex = false;
+			var shift_mutex = false;
+			var alt_mutex = false;
 			var started = false;
 			var redshift = false;
 			var shift_lock = false;
@@ -174,125 +183,129 @@
 				started = true;
 			}
 			
-			function handle_keypress(e) {	
-				if (! started) {
-					start();
+			function keydown_capslock(e) {
+				// If already locked, unlock
+				if (shift_lock || redshift_lock) {
+					shift_lock = false;
+					redshift_lock = false;
+					$.ionSound.play('typewriter-keyup');
 				}
-				key = e.which;
-				nosound = false;
+				// Otherwise, lock whatever is being held
+				if (e.shiftKey) {
+					shift_lock = true;
+				}
+				if (redshift) {
+					redshift_lock = true;
+				}
+			}
 
-				if (key == 20) { // caps lock = lock either shift, colour shift or both
-					// If already locked, unlock
-					if (shift_lock || redshift_lock) {
-						shift_lock = false;
-						redshift_lock = false;
-						$.ionSound.play('typewriter-keyup');
-						return false;
-					}
-					// Otherwise, lock whatever is being held
-					if (e.shiftKey) {
-						shift_lock = true;
-					}
-					if (redshift) {
-						redshift_lock = true;
-					}
+			function keydown_redshift(e) {	
+				e.preventDefault();					
+				if (redshift_lock) {
 					return false;
 				}
-						
-				if (key == 16) { // shift
-					if (shift_mutex || shift_lock) {
-						return false;
-					}
-					$.ionSound.play('typewriter-spacebar');
-					shift_mutex = true;
-					return false;
-				} 
-				if (key == 27) { // esc = red-shift
-					if (redshift_lock) {
-						return false;
-					}
-					$.ionSound.play('typewriter-spacebar');
-					redshift = true;
-					return false;
-				}				
-				if (keydown_mutex) {
-					return false;
-				}
-				keydown_mutex = true;
-				if (key == 13) { // enter
-					e.preventDefault();
-					$.ionSound.play('typewriter-carriage-return');
-					$('.output').append('<br/>');
-					line_length = x / xpx;
-					x = 0;
-					backspaces = 0;
-					y += ypx;
-					return_time = 13 * line_length;
-					$('.output').animate({
-						top: (vmid - y) + 'px',
-					}, 100).animate({
-						left: (hmid - x) + 'px',
-					}, return_time, function() {
-						// Stop playing the sound when the animation completes
-						$.ionSound.stop('typewriter-carriage-return');
-					}); 
-					return false;
-				}
-				if (key == 38) { // up-arrow
-					if (y > 0) {
-						y -= (ypx / 4);
-						$.ionSound.play('typewriter-spacebar');
-						move_page();
-					}
-					return false;
-				}
-				if (key == 40) { // down-arrow
-					$.ionSound.play('typewriter-spacebar');
-					y += (ypx / 4);
-					move_page();
-					return false;
-				}
-				if (key == 8 || key == 37) { // backspace, left-arrow
-					if (x > 0) {
-						x -= xpx;
-						backspaces++;
-						$.ionSound.play('typewriter-spacebar');
-					} 
-					return false;
-				} 
-				oldx = x;
-				if (key == 9) { // tab
-					e.preventDefault(); // Don't lose focus
-					if (e.shiftKey || shift_lock) {
-						var prev_tab_stop = ((x / xpx) % tab_width);
-						if (prev_tab_stop == 0) {
-							prev_tab_stop = tab_width;
-						} 
-						if ((x / xpx) - prev_tab_stop < 0) {
-							prev_tab_stop = x;
-						}
-						x -= (prev_tab_stop * xpx); 
-						backspaces += prev_tab_stop;
-					} else {
-						var next_tab_stop = tab_width - ((x / xpx) % tab_width);
-						if (next_tab_stop == 0) {
-							next_tab_stop = tab_width;
-						} else if ((x / xpx) + next_tab_stop > max_width) {
-							next_tab_stop = max_width - (x / xpx);
-						}
-						x += (next_tab_stop * xpx);
-					}
-					if ((oldx / xpx) < bell_width && (x / xpx) >= bell_width) {
-						$.ionSound.play('typewriter-bell-2');
-					}	else {				
-						$.ionSound.play('typewriter-spacebar');
-					}
-					move_page();
-					return false;
-				}
+				$.ionSound.play('typewriter-spacebar');
+				redshift = true;
+			}				
 
-				var c = String.fromCharCode(key);
+			function keydown_shift(e) {
+				if (shift_mutex || shift_lock) {
+					return false;
+				}
+				$.ionSound.play('typewriter-spacebar');
+				shift_mutex = true;
+			} 
+			
+			function keydown_alt(e) {
+				e.preventDefault();
+				if (alt_mutex) {
+					return false;
+				}
+				$.ionSound.play('typewriter-spacebar');
+				alt_mutex = true;
+			}
+
+			function keydown_enter(e) {
+				e.preventDefault();
+				$.ionSound.play('typewriter-carriage-return');
+				$('.output').append('<br/>');
+				line_length = x / xpx;
+				x = 0;
+				backspaces = 0;
+				y += ypx;
+				return_time = 13 * line_length;
+				$('.output').animate({
+					top: (vmid - y) + 'px',
+				}, 100).animate({
+					left: (hmid - x) + 'px',
+				}, return_time, function() {
+					// Stop playing the sound when the animation completes
+					$.ionSound.stop('typewriter-carriage-return');
+				}); 
+			}
+			
+			function keydown_cursor_up(e) {
+				e.preventDefault();
+				if (y > 0) {
+					y -= (ypx / 4);
+					$.ionSound.play('typewriter-spacebar');
+					move_page();
+				}
+			}
+
+			function keydown_cursor_down(e) {
+				e.preventDefault();
+				$.ionSound.play('typewriter-spacebar');
+				y += (ypx / 4);
+				move_page();
+			}
+
+			function keydown_cursor_left(e) {
+				e.preventDefault();
+				if (x > 0) {
+					x -= xpx;
+					backspaces++;
+					$.ionSound.play('typewriter-spacebar');
+				} 
+			} 
+			
+			function keydown_tab(e) {
+				e.preventDefault(); // Don't lose focus
+				var oldx = x;
 				if (e.shiftKey || shift_lock) {
+					var prev_tab_stop = ((x / xpx) % tab_width);
+					if (prev_tab_stop == 0) {
+						prev_tab_stop = tab_width;
+					} 
+					if ((x / xpx) - prev_tab_stop < 0) {
+						prev_tab_stop = x;
+					}
+					x -= (prev_tab_stop * xpx); 
+					backspaces += prev_tab_stop;
+				} else {
+					var next_tab_stop = tab_width - ((x / xpx) % tab_width);
+					if (next_tab_stop == 0) {
+						next_tab_stop = tab_width;
+					} else if ((x / xpx) + next_tab_stop > max_width) {
+						next_tab_stop = max_width - (x / xpx);
+					}
+					x += (next_tab_stop * xpx);
+				}
+				if ((oldx / xpx) < bell_width && (x / xpx) >= bell_width) {
+					$.ionSound.play('typewriter-bell-2');
+				}	else {				
+					$.ionSound.play('typewriter-spacebar');
+				}
+				move_page();
+			}
+			
+			function keydown_char(e) {
+				var nosound = false;
+				var key = e.which;
+				var c = String.fromCharCode(key);
+				if (alt_mutex && alted[key]) {
+					c = alted[key];
+				} else if (e.shiftKey || shift_lock) {
 					if (c.match(/[A-Za-z]/)) {
 						c = c.toUpperCase();
 						ink_remaining--;
@@ -384,6 +397,22 @@
 					if (black_height > 0) {
 						// Output the (possibly partial) character in black
 						$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + '); ' + black_height_style + '">' + c + '</div>');
+						
+						// Maybe output further subcropped character(s) in black to make the colouring more uneven
+						for (var subclips = 0; subclips < 3; subclips++) {
+							var subclip_right = Math.floor(Math.random() * xpx) + 1;
+							var subclip_left = Math.floor(Math.random() * subclip_right);
+							var subclip_bottom = Math.floor(Math.random() * black_height);
+							var subclip_top = Math.floor(Math.random() * subclip_bottom);
+							var random = Math.random();
+							var b = brokenness / max_brokenness;
+							var i = ink_remaining / max_ink_level;
+							var subclip_opacity = i * (0.5 + 0.5 * Math.sqrt(Math.random() * brokenness / max_brokenness) * (Math.random() < 0.5 ? 1 : -1)); 
+							var subclip_color = 'color: rgba(0, 0, 0, ' + subclip_opacity + '); ';
+							var subclip_clip = 'clip: rect(' + subclip_top + 'px, ' + subclip_right + 'px, ' + subclip_bottom + 'px, ' + subclip_left + 'px); ';
+							console.log("r: " + random + " b:" + b + " i: " + i + " result: " + subclip_opacity);
+							$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; ' + subclip_color + subclip_clip + '">' + c + '</div>');
+						}
 					}
 				}
 				
@@ -393,7 +422,7 @@
 					backspaces++; // Fudge hard right margin without position:absolute
 				}
 				
-				if ((oldx / xpx) < bell_width && (x / xpx) >= bell_width) {
+				if ((x / xpx) == bell_width) {
 					$.ionSound.play('typewriter-bell-2');
 				} else if (key == 32 || key == 39) { // space, right-arrow
 					$.ionSound.play('typewriter-spacebar');
@@ -404,7 +433,60 @@
 				// Update ink level slider and disp
 				$('#ctrl_inklevel').slider('option', 'value', ink_remaining);
 				$('#disp_inklevel').html(ink_remaining);
+			}
 
+			function keydown_nonmod(e) {
+				// Only one non-modifier key may be pressed at a time
+				if (keydown_mutex) {
+					return false;
+				}
+				keydown_mutex = true;
+				switch (e.which) {
+					case 9:  // tab
+						keydown_tab(e);
+						break;
+					case 13: // enter
+						keydown_enter(e);
+						break;
+					case 8:  // backspace
+					case 37: // left-arrow
+						keydown_cursor_left(e);
+						break;
+					case 38: // up-arrow
+						keydown_cursor_up(e);
+						break;
+					case 40: // down-arrow
+						keydown_cursor_down(e);
+						break;
+					default: // all other characters, including space and right arrow, work the same way
+						keydown_char(e);
+						break;
+				}
+			}
+			
+			function keydown(e) {	
+				if (! started) {
+					start();
+				}
+				switch (e.which) {
+					case 16:
+						keydown_shift(e);
+						break;
+					case 18:
+						keydown_alt(e);
+						break;
+					case 20:
+						keydown_capslock(e);
+						break;
+					case 27: // esc
+						keydown_redshift(e);
+						break;
+					case 17:	// ctrl - ignore
+					case 224: // cmd - ignore
+						break;
+					default:
+						keydown_nonmod(e);
+				}
 				return false;
 			}
 			
@@ -419,7 +501,7 @@
 				// Sliders
 				$('#ctrl_brokenness').slider({
 					min: 0,
-					max: 99,
+					max: max_brokenness,
 					value: brokenness,
 					slide: function(event, ui) {
 						$('#disp_brokenness').html(ui.value);
@@ -431,7 +513,7 @@
 				});
 				$('#ctrl_inklevel').slider({
 					min: 0,
-					max: 600,
+					max: max_ink_level,
 					value: ink_remaining,
 					slide: function(event, ui) {
 						$('#disp_inklevel').html(ui.value);
@@ -465,20 +547,10 @@
 					}, 20); 
 				})
 				.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
-					handle_keypress(e); 
+					keydown(e); 
 				})
 				.on('keyup', function(e) {
-					if (keydown_mutex && e.which != 16) {
-						// Play the key release sound after a short delay
-						setTimeout(function() {
-							$.ionSound.play('typewriter-keyup');
-						}, 65);
-						move_page();
-						// Wait till all animations have finished before releasing the mutex
-						$(":animated").promise().done(function() {
-							keydown_mutex = false;
-						});
-					} else if (shift_mutex && e.which == 16 && ! e.shiftKey) {
+					if (shift_mutex && e.which == 16 && ! e.shiftKey) {
 						if (! shift_lock) {
 							$.ionSound.play('typewriter-keyup');
 						}
@@ -488,7 +560,20 @@
 							$.ionSound.play('typewriter-keyup');
 						}
 						redshift = false;
-					}					
+					}	else if (alt_mutex && e.which == 18) {
+						$.ionSound.play('typewriter-keyup');
+						alt_mutex = false;
+					}	else if (keydown_mutex) {
+						// Play the key release sound after a short delay
+						setTimeout(function() {
+							$.ionSound.play('typewriter-keyup');
+						}, 65);
+						move_page();
+						// Wait till all animations have finished before releasing the mutex
+						$(":animated").promise().done(function() {
+							keydown_mutex = false;
+						});
+					}
 				}); // on()
 			}); //$()
 		</script>
@@ -498,8 +583,8 @@
 		</textarea>
 		<div class="topbar">
 			<div class="title">
-				<h1 style="margin-bottom: 0">Ben's Super-Realistic* Typewriter Simulator</h1>
-				<p style="margin-top: 0"><small>* Neither realism nor superness guaranteed</small></p>
+				<h1><img src="images/overtype_logo.png" alt="OverType" height="40"></h1>
+				<h2 style="margin-bottom: 0">The Over-The-Top Typewriter Simulator</h2>
 			</div>
 			<div class="controls">
 				<div class="control">
@@ -528,9 +613,10 @@
 				Why?
 			</h2>
 			<p>
-				All the existing typewriter simulators that I've found on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed, like a computer. On a real typewriter, backspace
-				simply moves the carriage back one space, allowing you to overtype a previously typed character; so I have implemented
-				it this way. If you want to erase a character, you need Tipp-Ex. (NB I do not advise using Tipp-Ex on your monitor). 
+				It started because I was trying to tell my kids about how typewriters worked (because of course they've never seen one), and all the existing typewriter simulators that I could find on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed, like a computer. On a real typewriter, backspace simply moves the carriage back one space, allowing you to overtype a previously typed character. Erasing required Tipp-Ex or suchlike.
+			</p>
+			<p>
+				Then it all got a bit out of hand as I strived to make the program's output "worse" by trying to faithfully re-create some of the other interesting eccentricities of typewriters that have been eliminated in the computer age, such as wobbly and unevenly-inked characters. Thanks go to my beta testers for their wonderful suggestions.
 			</p>
 			<h2>
 				Yeah, but... WHY?
@@ -564,14 +650,15 @@
 			</h2>
 			<ul>
 				<li>On Safari, the sounds are not synchronised. This is a Safari issue, and there doesn't seem to be anything I can do about it. Use Firefox or Chrome instead.</li>
+				<li>As it stands, this site is unlikely ever to work on a mobile touchscreen device, due to the problems of dealing with an on-screen keyboard - forcing it to appear without a visible input field, keeping it there, working around it etc. For mobile use it needs to be a full-blown app with its own input handler, rather than a web thing. I may attempt it at some point, if anyone really wants it.</li>
 			</ul>
 			<h2>
 				Improvements I'd like to make
 			</h2>
 			<ul>
-				<li>If you type too fast or try to type two keys at once, the mechanism should jam. Amazingly, this is the most commonly requested feature from the early testers of this program. The only reason I haven't implemented it is the problem of designing a UI to represent unjamming it by picking the mechanism apart.</li>
+				<li>If you type too fast or try to type two keys at once, the mechanism should jam. Amazingly, this is the most commonly requested feature from the beta testers of this program. The only reason I haven't implemented it is the problem of designing a UI to represent unjamming it by picking the mechanism apart, and how to make your fingers inky and oily when you do it.</li>
 				<li>Provide virtual Tipp-Ex.</li>
-				<li>Further suggestions welcome (though remember this is just for fun!) to <a href="mailto:ben@uniqcode.com">ben@uniqcode.com</a></li>
+				<li>Further suggestions welcome (though remember this is just for fun!) to <a href="mailto:ben@uniqcode.com">ben@uniqcode.com</a>.</li>
 			</ul>
 			<h2>
 				Credits
@@ -584,6 +671,15 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.17 (2014-02-23)
+				</h3>
+				<ul>
+					<li>Renamed from "Ben's Super-Realistic Typewriter Simulator" to "OverType - The Over-The-Top Typewriter Simulator"</li>
+					<li>The '#' symbol is now available by pressing alt-3 (the standard, stupid as it is, for the Mac UK keyboard layout)</li>
+					<li>Vary the inkiness within each character, rather than just from one character to the next, by overlaying two random partial clips of each character atop itself with an opacity that depends on the sliders.</li>
+					<li>Somewhat refactored the keydown handler into more digestible chunks.</li>
+				</ul>
 				<h3>
 					version 1.16 (2014-02-18)
 				</h3>
