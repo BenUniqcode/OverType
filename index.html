@@ -46,6 +46,13 @@
 				margin-left: auto;
 				margin-right: auto;
 			}
+			.info-btn {
+				position: fixed;
+				top: 6em;
+				left: 0;
+				z-index: 9;
+				display: none;
+			}
 			.instruct {
 				font-size: 18px;
 				color: #666;
@@ -118,46 +125,6 @@
 			const bell_width = 69;
 			const max_width = 80;
 			const tab_width = 8;
-			const unshifted = {
-			   59: ';',
-				 61: '=',
-				173: '-',
-				188: ',',
-				190: '.',
-				191: '/',
-				192: '`',
-				219: '[',
-				220: '\\',
-				221: ']',
-				222: '\'',
-			};
-			const shifted = {
-				48: ')',
-				49: '!',
-				50: '@',
-				51: '£',
-				52: '$',
-				53: '%',
-				54: '^',
-				55: '&',
-				56: '*',
-				57: '(',
-				59: ':',
-				61: '+',
-				173: '_',
-				188: '<',
-				190: '>',
-				191: '?',
-				192: '~',
-				219: '{',
-				220: '|',
-				221: '}',
-				222: '"',
-			};
-			const alted = {
-				50: '€',
-				51: '#',
-			};
 			const xpx = 12, ypx = 30, char_height = 20;
 			const margin_top = 40, margin_left = 30;
 			const max_brokenness = 99;
@@ -173,6 +140,7 @@
 			var ink_remaining = 400;
 			var ink_variation = 0.3;
 			var keydown_mutex = false;
+			var keypress_mutex = false;
 			var shift_mutex = false;
 			var alt_mutex = false;
 			var started = false;
@@ -182,8 +150,13 @@
 
 			function start() {			
 				$('.info').hide();
-				$('.output, .cursor, .controls').show();
+				$('.info-btn, .output, .cursor').show();
 				started = true;
+			}
+			function stop() {
+				$('.info-btn, .output, .cursor').hide();
+				$('.info').show();
+				started = false;
 			}
 			
 			function keydown_capslock(e) {
@@ -229,6 +202,8 @@
 			}
 
 			function keydown_enter(e) {
+				// Although this is a keydown handler, it must also set keypress_mutex to prevent chars being typed during a return
+				keypress_mutex = true;
 				e.preventDefault();
 				$.ionSound.play('typewriter-carriage-return');
 				$('.output').append('<br/>');
@@ -244,6 +219,7 @@
 				}, return_time, function() {
 					// Stop playing the sound when the animation completes
 					$.ionSound.stop('typewriter-carriage-return');
+					keypress_mutex = false;
 				}); 
 			}
 			
@@ -269,9 +245,33 @@
 					x -= xpx;
 					backspaces++;
 					$.ionSound.play('typewriter-spacebar');
+					move_page();
 				} 
 			} 
+
+			function keydown_cursor_right(e) {
+				e.preventDefault();
+				advance_one_space(e.which, false);
+				move_page();
+			} 
 			
+			// shared between keydown_cursor_right() and keypress()
+			function advance_one_space(key, nosound) {
+				if ((x / xpx) < max_width) {
+					x += xpx;
+				} else {
+					backspaces++; // Fudge hard right margin without position:absolute
+				}
+				
+				if ((x / xpx) == bell_width) {
+					$.ionSound.play('typewriter-bell-2');
+				} else if (key == 32 || key == 39) { // space, right-arrow
+					$.ionSound.play('typewriter-spacebar');
+				} else if (! nosound) {
+					$.ionSound.play('typewriter-keydown');
+				} 
+			}
+
 			function keydown_tab(e) {
 				e.preventDefault(); // Don't lose focus
 				var oldx = x;
@@ -302,30 +302,33 @@
 				move_page();
 			}
 			
-			function keydown_char(e) {
-				var nosound = false;
+			function keypress(e) {
 				var key = e.which;
+				// Don't handle keys that are handled by keydown functions
+				switch (key) {
+					case 8:
+					case 9:
+					case 13:
+					case 37:
+					case 38:
+					case 39:
+					case 40:
+					case 16:
+					case 18:
+					case 20:
+					case 27:
+					case 17:
+					case 224:
+						return false;
+				}				
+				if (keypress_mutex) {
+					return false;
+				}
+				keypress_mutex = true; // released by keyup
+				var nosound = false;
 				var c = String.fromCharCode(key);
-				if (alt_mutex && alted[key]) {
-					c = alted[key];
-				} else if (e.shiftKey || shift_lock) {
-					if (c.match(/[A-Za-z]/)) {
-						c = c.toUpperCase();
-						ink_remaining--;
-					} else if (shifted[key]) {
-						c = shifted[key];
-						ink_remaining--;
-					} else {
-						c = '&nbsp;';
-					}
-				} else if (c.match(/[A-Za-z0-9]/)) {
-					c = c.toLowerCase();
+				if (c.match(/\S/)) {
 					ink_remaining--;
-				} else if (unshifted[key]) {
-					c = unshifted[key];
-					ink_remaining--;
-				} else {
-					c = '&nbsp;';
 				}
 				
 				// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
@@ -413,25 +416,13 @@
 							var subclip_opacity = i * (0.5 + 0.5 * Math.sqrt(Math.random() * brokenness / max_brokenness) * (Math.random() < 0.5 ? 1 : -1)); 
 							var subclip_color = 'color: rgba(0, 0, 0, ' + subclip_opacity + '); ';
 							var subclip_clip = 'clip: rect(' + subclip_top + 'px, ' + subclip_right + 'px, ' + subclip_bottom + 'px, ' + subclip_left + 'px); ';
-							console.log("r: " + random + " b:" + b + " i: " + i + " result: " + subclip_opacity);
+							// console.log("r: " + random + " b:" + b + " i: " + i + " result: " + subclip_opacity);
 							$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; ' + subclip_color + subclip_clip + '">' + c + '</div>');
 						}
 					}
 				}
-				
-				if ((x / xpx) < max_width) {
-					x += xpx;
-				} else {
-					backspaces++; // Fudge hard right margin without position:absolute
-				}
-				
-				if ((x / xpx) == bell_width) {
-					$.ionSound.play('typewriter-bell-2');
-				} else if (key == 32 || key == 39) { // space, right-arrow
-					$.ionSound.play('typewriter-spacebar');
-				} else if (! nosound) {
-					$.ionSound.play('typewriter-keydown');
-				} 
+
+				advance_one_space(key, nosound);
 
 				// Update ink level slider and disp
 				$('#ctrl_inklevel').slider('option', 'value', ink_remaining);
@@ -458,12 +449,14 @@
 					case 38: // up-arrow
 						keydown_cursor_up(e);
 						break;
+					case 32: // space
+					case 39: // right-arrow - only needs special handling because Chrome doesn't produce a keypress event for it
+						keydown_cursor_right(e);
+						break;
 					case 40: // down-arrow
 						keydown_cursor_down(e);
 						break;
-					default: // all other characters, including space and right arrow, work the same way
-						keydown_char(e);
-						break;
+					default: // all other characters are handled by the keypress handler
 				}
 			}
 			
@@ -512,7 +505,7 @@
     			$('.warning-rgba').dialog();
     			return false;
     		}
-    		if (navigator.userAgent.match(/[Ss]afari/)) { // Not perfect but this is only for advisory purposes
+    		if (navigator.userAgent.match(/[Ss]afari/) && ! navigator.userAgent.match(/[Cc]hrome/)) { // Not perfect but this is only for advisory purposes
     			$('.warning-safari').dialog();
     		}
 				// Sliders
@@ -566,6 +559,9 @@
 				.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
 					keydown(e); 
 				})
+				.on('keypress', function(e) {
+					keypress(e);
+				})
 				.on('keyup', function(e) {
 					if (shift_mutex && e.which == 16 && ! e.shiftKey) {
 						if (! shift_lock) {
@@ -580,15 +576,18 @@
 					}	else if (alt_mutex && e.which == 18) {
 						$.ionSound.play('typewriter-keyup');
 						alt_mutex = false;
-					}	else if (keydown_mutex) {
+					} else {
 						// Play the key release sound after a short delay
 						setTimeout(function() {
 							$.ionSound.play('typewriter-keyup');
 						}, 65);
-						move_page();
+					 	if (keypress_mutex) {
+							move_page();
+						}
 						// Wait till all animations have finished before releasing the mutex
 						$(":animated").promise().done(function() {
 							keydown_mutex = false;
+							keypress_mutex = false;
 						});
 					}
 				}); // on()
@@ -625,6 +624,9 @@
 			</div>
 		</div><!-- /topbar -->
 		
+		<div class="info-btn">
+			<button onclick="stop()">Show instructions/info page</button>
+		</div>
 		<div class="info">
 			<h2>
 				Why?
@@ -633,13 +635,10 @@
 				It started because I was trying to tell my kids about how typewriters worked (because of course they've never seen one), and all the existing typewriter simulators that I could find on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed, like a computer. On a real typewriter, backspace simply moves the carriage back one space, allowing you to overtype a previously typed character. Erasing requires Tipp-Ex or suchlike.
 			</p>
 			<p>
-				Then it all got a bit out of hand as I strived to make the program's output "worse" by trying to faithfully re-create some of the other interesting eccentricities of typewriters that have been eliminated in the computer age, such as wobbly and unevenly-inked characters. Thanks go to my beta testers for their wonderful suggestions.
+				One day my youngest son suggested I should write one that works the right way and allows overtyping. This seemed like it would be an interesting challenge... and indeed it was. The first version took me about an hour. 
 			</p>
-			<h2>
-				Yeah, but... WHY?
-			</h2>
 			<p>
-				Because it's a fun thing to play with and also an interesting little development project - there's more of a challenge to the implementation than you might expect... 
+				Since then it's all got a bit out of hand as I strive to make the program's output "worse" by trying to faithfully re-create some of the other interesting eccentricities of typewriters that have been eliminated in the computer age, such as wobbly and unevenly-inked characters. Thanks to all the beta testers for their great suggestions and feedback.
 			</p>
 			<noscript>
 				<p style="font-size: 36px">
@@ -660,6 +659,7 @@
 							<li>[esc] is "colour shift", which gives you red text. Or, sometimes, only partly so...</li>
 							<li>[shift] and/or [esc] can be locked down by holding one or both and pressing [caps lock] (effectively "shift lock"). Press [caps lock] again to unlock.</li>
 							<li>Move the sliders (see below)</li>
+							<li>Do a dollar sign the proper way by overtyping a capital <b>S</b> with a <b>|</b> (vertical bar = [shift][\])</li>
 						</ul>
 					</li>
 					<li>Ready? Just start typing, or click here if you prefer: <button style="font-size: large" onclick="start()">START!</button></li>
@@ -676,6 +676,7 @@
 			</h2>
 			<ul>
 				<li>On Safari, the sounds are not synchronised. This is a Safari issue, and there doesn't seem to be anything I can do about it. Use Firefox or Chrome instead.</li>
+				<li>Because I have to use the 'keydown' and 'keyup' events rather than 'keypress', I get keycodes rather than characters, and have to map them to characters myself. If you don't have a UK Mac keyboard then some of the symbols probably will not match your keyboard.</li>
 				<li>As it stands, this site is unlikely ever to work on a mobile touchscreen device, due to the problems of dealing with an on-screen keyboard - forcing it to appear without a visible input field, keeping it there, working around it etc. For mobile use it needs to be a full-blown app with its own input handler, rather than a web thing. I may attempt it at some point, if anyone really wants it.</li>
 			</ul>
 			<h2>
@@ -697,6 +698,15 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.19 (2014-02-24)
+				</h3>
+				<ul>
+					<li>Moved handling of all printing characters to a keypress handler. This means I no longer have to manually map keycodes to characters, which in turn means that you should now get the correct symbol characters according to your own keyboard layout.</li>
+					<li>Movement keys (space, backspace, tab, and cursor keys) now all move on keydown, not keyup.</li>
+					<li>Provide a button to get the instructions page back.</li>
+					<li>Fix the Safari warning being shown to Chrome users (hopefully). Browser detection sucks.</li>
+				</ul>
 				<h3>
 					version 1.18 (2014-02-24)
 				</h3>
