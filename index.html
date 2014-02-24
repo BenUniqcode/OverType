@@ -47,8 +47,11 @@
 				margin-right: auto;
 			}
 			.instruct {
-				font-size: 20pt;
+				font-size: 18px;
 				color: #666;
+			}
+			.instruct ul ul {
+				font-size: 16px;
 			}
 			.output {
 				font-family: Courier, "Courier New", monospace;
@@ -613,7 +616,7 @@
 				Why?
 			</h2>
 			<p>
-				It started because I was trying to tell my kids about how typewriters worked (because of course they've never seen one), and all the existing typewriter simulators that I could find on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed, like a computer. On a real typewriter, backspace simply moves the carriage back one space, allowing you to overtype a previously typed character. Erasing required Tipp-Ex or suchlike.
+				It started because I was trying to tell my kids about how typewriters worked (because of course they've never seen one), and all the existing typewriter simulators that I could find on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed, like a computer. On a real typewriter, backspace simply moves the carriage back one space, allowing you to overtype a previously typed character. Erasing requires Tipp-Ex or suchlike.
 			</p>
 			<p>
 				Then it all got a bit out of hand as I strived to make the program's output "worse" by trying to faithfully re-create some of the other interesting eccentricities of typewriters that have been eliminated in the computer age, such as wobbly and unevenly-inked characters. Thanks go to my beta testers for their wonderful suggestions.
@@ -636,6 +639,15 @@
 				<ul>
 					<li>Make sure you have your sound turned on for the fully-immersive experience!</li>
 					<li>If it stops working or to see this text again, just reload the page.</li>
+					<li>As well as just typing normally, you might like try these:
+						<ul>
+							<li>You can use the cursor keys to move around. The up and down cursors move the roller by a quarter-line.</li>
+							<li>Use [tab] and [shift][tab] to jump forward or back to the nearest tab stop.</li>
+							<li>[esc] is "colour shift", which gives you red text. Or, sometimes, only partly so...</li>
+							<li>[shift] and/or [esc] can be locked down by holding one or both and pressing [caps lock] (effectively "shift lock"). Press [caps lock] again to unlock.</li>
+							<li>Move the sliders (see below)</li>
+						</ul>
+					</li>
 					<li>Ready? Just start typing, or click here if you prefer: <button style="font-size: large" onclick="start()">START!</button></li>
 				</ul>
 			</div>
