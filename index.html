@@ -501,6 +501,20 @@
 			}
 
 			$(function() {
+				// Check browser supports rgba() colours (stolen from Modernizr)
+				var rgba_check = function() {
+					var elem = document.createElement('div');
+    			var style = elem.style;
+    			style.cssText = 'background-color:rgba(150,255,150,.5)';
+    			return ('' + style.backgroundColor).indexOf('rgba') > -1;
+    		};
+    		if (! rgba_check()) {
+    			$('.warning-rgba').dialog();
+    			return false;
+    		}
+    		if (navigator.userAgent.match(/[Ss]afari/)) { // Not perfect but this is only for advisory purposes
+    			$('.warning-safari').dialog();
+    		}
 				// Sliders
 				$('#ctrl_brokenness').slider({
 					min: 0,
@@ -684,6 +698,12 @@
 			</h2>
 			<div class="changelog">
 				<h3>
+					version 1.18 (2014-02-24)
+				</h3>
+				<ul>
+					<li>Bail if no rbga() support, and try to warn Safari users</li>
+				</ul>
+				<h3>
 					version 1.17 (2014-02-23)
 				</h3>
 				<ul>
@@ -841,6 +861,13 @@
 		<div class="output">
 		</div>
 		<div class="cursor">
+		</div>
+		<!-- Warnings which may be displayed modally -->
+		<div class="warning-rgba" style="display: none; font-size: 18px; color: red;">
+			<b>You <em>really</em> need to upgrade your web browser.</b> OverType will not work on your browser because it does not support rgba() colours. They've been around for a long time now, so your browser must be pretty old. Using a very old web browser to surf the net means an ever-increasing number of sites will not work properly for you, and may be <em>unsafe</em> due to security holes which have long-since been fixed. Do yourself a favour and upgrade to a modern browser. 
+		</div>
+		<div class="warning-safari" style="display: none">
+			It looks like you are using Safari. I recommend you use a different browser. At the time of this writing, Safari has a bug (or what Apple consider a deliberate feature) which makes it impossible to synchronise the sound effects properly. Any modern Firefox, Chrome or IE will give you a better result.
 		</div>
 	</body>
 </html>
