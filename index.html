@@ -129,6 +129,31 @@
 			const margin_top = 40, margin_left = 30;
 			const max_brokenness = 99;
 			const max_ink_level = 600;
+			const shifted = {
+				'§': '±',
+				'1': '!',
+				'2': '@',
+				'3': '£',
+				'4': '$',
+				'5': '%',
+				'6': '^',
+				'7': '&',
+				'8': '*',
+				'9': '(',
+				'0': ')',
+				'-': '_',
+				'=': '+',
+				'[': '{',
+				']': '}',
+				';': ':',
+				'\'': '"',
+				'\\': '|',
+				',': '<',
+				'.': '>',
+				'/': '?',
+				'`': '~',
+			};
+			var real_shifted = {};
 			var x = max_width * xpx / 2;
 			var y = 0;
 			var backspaces = 0;
@@ -141,8 +166,10 @@
 			var ink_variation = 0.3;
 			var keydown_mutex = false;
 			var keypress_mutex = false;
+			var keydown_keycode = false;
 			var shift_mutex = false;
 			var alt_mutex = false;
+			var capslock_pressed_recently = false;
 			var started = false;
 			var redshift = false;
 			var shift_lock = false;
@@ -164,7 +191,7 @@
 				if (shift_lock || redshift_lock) {
 					shift_lock = false;
 					redshift_lock = false;
-					$.ionSound.play('typewriter-keyup');
+					$.ionSound.play('typewriter-keyup-2');
 				}
 				// Otherwise, lock whatever is being held
 				if (e.shiftKey) {
@@ -203,7 +230,8 @@
 
 			function keydown_enter(e) {
 				// Although this is a keydown handler, it must also set keypress_mutex to prevent chars being typed during a return
-				keypress_mutex = true;
+				// as it apparently does not cause a keypress event itself.
+				keypress_mutex = true;				
 				e.preventDefault();
 				$.ionSound.play('typewriter-carriage-return');
 				$('.output').append('<br/>');
@@ -217,9 +245,11 @@
 				}, 100).animate({
 					left: (hmid - x) + 'px',
 				}, return_time, function() {
-					// Stop playing the sound when the animation completes
+					// Stop playing the sound and release the mutex when the animation completes
 					$.ionSound.stop('typewriter-carriage-return');
+					keydown_mutex = false;
 					keypress_mutex = false;
+					keydown_keycode = false;
 				}); 
 			}
 			
@@ -251,25 +281,18 @@
 
 			function keydown_cursor_right(e) {
 				e.preventDefault();
-				advance_one_space(e.which, false);
+				advance_one_space();
+				$.ionSound.play('typewriter-spacebar');
 				move_page();
 			} 
 			
 			// shared between keydown_cursor_right() and keypress()
-			function advance_one_space(key, nosound) {
+			function advance_one_space() {
 				if ((x / xpx) < max_width) {
 					x += xpx;
 				} else {
 					backspaces++; // Fudge hard right margin without position:absolute
 				}
-				
-				if ((x / xpx) == bell_width) {
-					$.ionSound.play('typewriter-bell-2');
-				} else if (key == 32 || key == 39) { // space, right-arrow
-					$.ionSound.play('typewriter-spacebar');
-				} else if (! nosound) {
-					$.ionSound.play('typewriter-keydown');
-				} 
 			}
 
 			function keydown_tab(e) {
@@ -303,34 +326,63 @@
 			}
 			
 			function keypress(e) {
-				var key = e.which;
 				// Don't handle keys that are handled by keydown functions
-				switch (key) {
-					case 8:
-					case 9:
-					case 13:
-					case 37:
-					case 38:
-					case 39:
-					case 40:
-					case 16:
-					case 18:
-					case 20:
-					case 27:
-					case 17:
-					case 224:
-						return false;
-				}				
+				// These will all have charCode 0, which is the only way of distinguishing them from chars which have the
+				// same value on Chrome which sets keyCode to match charCode in keypress handlers. (eg in a keydown handler
+				// keyCode 39 is right-arrow, while in a keypress handler, it's the quote character ' )
+				if (e.charCode == 0) {
+					// Note the use of keyCode here so these numbers will match the keydown ones
+					switch (e.keyCode) {
+						case 8:
+						case 9:
+						case 13:
+						case 37:
+						case 38:
+						case 39:
+						case 40:
+						case 16:
+						case 18:
+						case 20:
+						case 27:
+						case 17:
+						case 224:
+							return false;
+					}				
+				}
 				if (keypress_mutex) {
 					return false;
 				}
-				keypress_mutex = true; // released by keyup
+				keypress_mutex = true;
+				
 				var nosound = false;
-				var c = String.fromCharCode(key);
+				
+				var c;
+				c = String.fromCharCode(e.charCode); // Always uppercase
+				if ( e.charCode >= 65 && e.charCode <= 90 ) {
+					// We only want upper case letters if shifted (so caps lock doesn't do them if it's only being used for colourshift lock)
+					if (! e.shiftKey && ! shift_lock) {
+						c = c.toLowerCase();
+					} 
+				} else if (e.shiftKey) {
+					real_shifted[keydown_keycode] = c; // Learn the real shifted char
+					// console.log("Storing " + keydown_keycode + " -> " + c);
+    		} else if (shift_lock) {
+    			if (keydown_keycode > 0 && real_shifted[keydown_keycode]) {
+						// Use the real shifted char if we learned it
+    				c = real_shifted[keydown_keycode]; 
+						// console.log("Retrieving " + keydown_keycode + " -> " + c);
+    			} else if (shifted[c]) {
+						// Otherwise fall back to the default shifted char mapping
+						// console.log("Using default shiftmap for " + c)
+    				c = shifted[c]; 
+						// console.log(" -> " + c);
+    			}
+  		  }
+
 				if (c.match(/\S/)) {
 					ink_remaining--;
 				}
-				
+												
 				// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
 				var ink_level = (ink_remaining > 0) ? ink_remaining / 400 - ink_variation + Math.random() * ink_variation : 0;
 								
@@ -422,7 +474,14 @@
 					}
 				}
 
-				advance_one_space(key, nosound);
+				advance_one_space();
+				
+				if ((x / xpx) == bell_width) {
+					$.ionSound.play('typewriter-bell-2');
+				} else if (! nosound) {
+					// $.ionSound.stop('typewriter-keyup-2');
+					$.ionSound.play('typewriter-keydown-2');
+				} 
 
 				// Update ink level slider and disp
 				$('#ctrl_inklevel').slider('option', 'value', ink_remaining);
@@ -435,6 +494,10 @@
 					return false;
 				}
 				keydown_mutex = true;
+				// Because the keypress event does not make keycode available for normal chars, we have to store it in the keydown handler
+				// so it can be referenced in the keypress handler to relate shifted chars to their keys so we can retrieve them 
+				// when shiftlock is on. 
+				keydown_keycode = e.keyCode; 
 				switch (e.which) {
 					case 9:  // tab
 						keydown_tab(e);
@@ -472,6 +535,12 @@
 						keydown_alt(e);
 						break;
 					case 20:
+						// To cope with Chrome/Mac, FF/Mac, and all Windows&Linux browsers work in 3 different ways wrt caps lock,
+						// we have to jump through extra hoops. Start a timer here, and check in keyup.
+						capslock_pressed_recently = true;
+						setTimeout(function() {
+							capslock_pressed_recently = false;
+						}, 1500);
 						keydown_capslock(e);
 						break;
 					case 27: // esc
@@ -493,6 +562,58 @@
 				}, 20);
 			}
 
+			// Handler for keyup events
+			function keyup(e) {
+				if (e.which == 20) {
+					keyup_capslock();
+				} else if (shift_mutex && e.which == 16 && ! e.shiftKey) {
+					if (! shift_lock) {
+						$.ionSound.play('typewriter-keyup-2');
+					}
+					shift_mutex = false;
+				}	else if (alt_mutex && e.which == 18 && ! e.altKey) {
+					$.ionSound.play('typewriter-keyup-2');
+					alt_mutex = false;
+				}	else if (redshift && e.which == 27) {
+					if (! redshift_lock) {
+						$.ionSound.play('typewriter-keyup-2');
+					}
+					redshift = false;
+				} else if (keydown_mutex && e.which != 13) { // CR does its own sound and mutex release
+					// Play the key release sound and release the mutexes after a short delay
+					setTimeout(function() {
+						$.ionSound.play('typewriter-keyup-2');
+						keydown_mutex = false;
+						keypress_mutex = false;
+						keydown_keycode = false;
+					}, 65);
+					if (keypress_mutex) {
+						move_page();
+					}
+				}
+			}
+
+			// Special keyup handling is necessary for caps lock
+			// On Firefox/Mac, each press of caps lock only fires keydown
+			// On Chrome/Mac, the first press of caps lock only fires keydown, and the second press only fires keyup,
+			// as if the key had been held down for all the time that its light was on. (Safari is the same, but we discourage
+			// use of Safari anyway).
+			// On other browsers, it behaves like a normal key, ie it gets a keydown event when first pressed, 
+			// possibly further keydown events on auto-repeat, and a keyup event when released.
+			// So everything apart from Chrome/Mac can be handled by a keydown handler as long as it's not held down
+			// long enough to auto-repeat. But for Chrome/Mac we might need to act on a keyup. 
+			// So when there's a capslock keydown event, we set capslock_pressed_recently=true and set a timer to set
+			// it to false after an interval. Then on a keyup event, here we check that flag; if it's still true, 
+			// assume it was a single press event keydown+keyup
+			function keyup_capslock() {
+				if (! capslock_pressed_recently) {
+					// Looks like this is a lone keyup event on a webkit browser which means the key was pressed a second time.
+					// So fire the keydown handler.
+					keydown_capslock();
+				}
+			}
+
+			// onLoad setup
 			$(function() {
 				// Check browser supports rgba() colours (stolen from Modernizr)
 				var rgba_check = function() {
@@ -540,8 +661,8 @@
 				$.ionSound({
 					path: "assets/typewriter_sounds/",
     			sounds: [
-        		"typewriter-keydown",
-        		"typewriter-keyup",
+        		"typewriter-keydown-2",
+        		"typewriter-keyup-2",
         		"typewriter-carriage-return",
         		"typewriter-spacebar",
         		"typewriter-bell-2",
@@ -557,39 +678,16 @@
 					}, 20); 
 				})
 				.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
+					// console.log("keydown: " + e.which + " keydown_mutex " + keydown_mutex + " keypress_mutex " + keypress_mutex);
 					keydown(e); 
 				})
 				.on('keypress', function(e) {
+					// console.log("keypress: " + e.which + " keydown_mutex " + keydown_mutex + " keypress_mutex " + keypress_mutex);
 					keypress(e);
 				})
 				.on('keyup', function(e) {
-					if (shift_mutex && e.which == 16 && ! e.shiftKey) {
-						if (! shift_lock) {
-							$.ionSound.play('typewriter-keyup');
-						}
-						shift_mutex = false;
-					}	else if (redshift && e.which == 27) {
-						if (! redshift_lock) {
-							$.ionSound.play('typewriter-keyup');
-						}
-						redshift = false;
-					}	else if (alt_mutex && e.which == 18) {
-						$.ionSound.play('typewriter-keyup');
-						alt_mutex = false;
-					} else {
-						// Play the key release sound after a short delay
-						setTimeout(function() {
-							$.ionSound.play('typewriter-keyup');
-						}, 65);
-					 	if (keypress_mutex) {
-							move_page();
-						}
-						// Wait till all animations have finished before releasing the mutex
-						$(":animated").promise().done(function() {
-							keydown_mutex = false;
-							keypress_mutex = false;
-						});
-					}
+					// console.log("keyup: " + e.which + " keydown_mutex " + keydown_mutex + " keypress_mutex " + keypress_mutex);
+					keyup(e);
 				}); // on()
 			}); //$()
 		</script>
@@ -698,6 +796,16 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.20 (2014-02-26)
+				</h3>
+				<ul>
+					<li>Fix certain symbol characters not working since 1.19 (or possibly earlier on Chrome).</li>
+					<li>Fix colourshift lock always acting as caps lock too.</li>
+					<li>Fix shift lock. We have no way of determining in advance which symbols are produced by which shifted key on your particular keyboard layout; so, shift-lock starts off using my keyboard layout (UK Mac), but whenever you use shift (unlocked), it will learn the real symbol on the shift position of that key, and will thenceforth use that in shift-lock too.</li>
+					<li>Fix releasing shift/colourshift lock not working properly on Chrome/Mac. The fix for this is slightly shonky but can't be helped due to the insane differences between browsers on which events capslock fires.</li>
+					<li>Tweaks to timing and keydown/keyup sounds to try to improve responsiveness and make it a bit harder to type far too fast for the sounds to keep up.</li>
+				</ul>
 				<h3>
 					version 1.19 (2014-02-24)
 				</h3>
