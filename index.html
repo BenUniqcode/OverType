@@ -233,7 +233,7 @@
 				// as it apparently does not cause a keypress event itself.
 				keypress_mutex = true;				
 				e.preventDefault();
-				$.ionSound.play('typewriter-carriage-return');
+				$.ionSound.play('typewriter-carriage-return-main');
 				$('.output').append('<br/>');
 				line_length = x / xpx;
 				x = 0;
@@ -246,7 +246,8 @@
 					left: (hmid - x) + 'px',
 				}, return_time, function() {
 					// Stop playing the sound and release the mutex when the animation completes
-					$.ionSound.stop('typewriter-carriage-return');
+					$.ionSound.stop('typewriter-carriage-return-main');
+					$.ionSound.play('typewriter-carriage-return-stop');
 					keydown_mutex = false;
 					keypress_mutex = false;
 					keydown_keycode = false;
@@ -663,7 +664,8 @@
     			sounds: [
         		"typewriter-keydown-2",
         		"typewriter-keyup-2",
-        		"typewriter-carriage-return",
+        		"typewriter-carriage-return-main",
+        		"typewriter-carriage-return-stop",
         		"typewriter-spacebar",
         		"typewriter-bell-2",
     			],
@@ -796,6 +798,13 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.21 (2014-02-26)
+				</h3>
+				<ul>
+					<li>Separated carriage return sound into motion and stop sounds. The motion sound length depends on the line length,
+    while the stop sound is the same for all.</li>
+  			</ul>
 				<h3>
 					version 1.20 (2014-02-26)
 				</h3>
