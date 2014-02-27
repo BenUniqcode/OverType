@@ -233,7 +233,10 @@
 				// as it apparently does not cause a keypress event itself.
 				keypress_mutex = true;				
 				e.preventDefault();
-				$.ionSound.play('typewriter-carriage-return-main');
+				// If we're not already at the beginning of the line, start playing the return motion sound
+				if (x > 0) {
+					$.ionSound.play('typewriter-carriage-return-main');
+				}
 				$('.output').append('<br/>');
 				line_length = x / xpx;
 				x = 0;
@@ -245,9 +248,17 @@
 				}, 100).animate({
 					left: (hmid - x) + 'px',
 				}, return_time, function() {
-					// Stop playing the sound and release the mutex when the animation completes
+					// When the movement has finished, stop playing the motion sound, play the stop sound, and release the mutexes 
 					$.ionSound.stop('typewriter-carriage-return-main');
 					$.ionSound.play('typewriter-carriage-return-stop');
+					// Do a little wobble
+					$('.output').animate({
+						left: (hmid - x + 3) + 'px',
+						top: (vmid - y + 2) + 'px',
+					}, 100).animate({
+						left: (hmid - x) + 'px',
+						top: (vmid - y) + 'px',
+					}, 100);
 					keydown_mutex = false;
 					keypress_mutex = false;
 					keydown_keycode = false;
@@ -798,6 +809,13 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.22 (2014-02-27)
+				</h3>
+				<ul>
+					<li>Don't play the motion part of the CR sound if we are already at the beginning of the line (otherwise it was playing a tiny bit of it, which sounded bad).</li>
+					<li>Animate a little wobble at the stop part of a CR. It just seemed like the sound demanded it.</li>
+				</ul>
 				<h3>
 					version 1.21 (2014-02-26)
 				</h3>
