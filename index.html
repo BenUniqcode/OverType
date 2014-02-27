@@ -29,7 +29,7 @@
 				top: -1000px;
 			}
 			.topbar {
-				position: absolute;
+				position: fixed;
 				top: 0;
 				left: 0;
 				background-color: #aaa;
@@ -472,15 +472,17 @@
 						for (var subclips = 0; subclips < 3; subclips++) {
 							var subclip_right = Math.floor(Math.random() * xpx) + 1;
 							var subclip_left = Math.floor(Math.random() * subclip_right);
-							var subclip_bottom = Math.floor(Math.random() * black_height);
+							var subclip_bottom = Math.floor(Math.random() * black_height) + 1;
 							var subclip_top = Math.floor(Math.random() * subclip_bottom);
-							var random = Math.random();
-							var b = brokenness / max_brokenness;
+							var r = Math.random();
+							var sign = Math.random() < 0.5 ? -1 : 1;
+							var b = brokenness / (max_brokenness + 1); // max_brokenness is 99, but let's use a percentage
 							var i = ink_remaining / max_ink_level;
-							var subclip_opacity = i * (0.5 + 0.5 * Math.sqrt(Math.random() * brokenness / max_brokenness) * (Math.random() < 0.5 ? 1 : -1)); 
+							// Thanks to John Valentine for help with the following formula
+							var subclip_opacity = i * (0.5 + 0.5 * Math.sqrt(r * b) * sign); 
 							var subclip_color = 'color: rgba(0, 0, 0, ' + subclip_opacity + '); ';
 							var subclip_clip = 'clip: rect(' + subclip_top + 'px, ' + subclip_right + 'px, ' + subclip_bottom + 'px, ' + subclip_left + 'px); ';
-							// console.log("r: " + random + " b:" + b + " i: " + i + " result: " + subclip_opacity);
+							// console.log("sign: " + sign + " r: " + r + " b:" + b + " i: " + i + " result: " + subclip_opacity);
 							$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; ' + subclip_color + subclip_clip + '">' + c + '</div>');
 						}
 					}
