@@ -11,22 +11,18 @@
 				margin: 0;
 			}
 			h1 {
-				margin: 0;
+				margin-top: 0;
+				margin-bottom: 0;
 				font-family: Courier, "Courier New", monospace;
 				font-weight: bold;
 				font-size: 40px;
 			}
 			h2 {
-				margin-top: 0;
+				margin-top: -5px;
 				font-size: 16px;
 			}
 			h3 {
 				font-size: 14px;
-			}
-			#input {
-				position: absolute;
-				left: -1000px;
-				top: -1000px;
 			}
 			.topbar {
 				position: fixed;
@@ -34,7 +30,7 @@
 				left: 0;
 				background-color: #aaa;
 				z-index: 5;
-				padding: 1ex 2% 0 1%;
+				padding: 1ex 2% 2px 1%;
 				height: 10ex;
 				width: 97%;
 			}
@@ -108,7 +104,7 @@
 			}
 		</style>
 		<style type="text/css" media="print">
-			.cursor, .title, .instruct, #input { display: none }
+			.cursor, .title, .instruct { display: none }
 			.output { left: 0 !important; top: 0 !important; box-shadow: none; border: none; padding: 10ex 0 0 0; }			
 		</style>
 		<!-- jQuery -->
@@ -338,6 +334,11 @@
 			}
 			
 			function keypress(e) {
+				// Prevent browser special key actions as long as ctrl/alt/cmd is not being held
+				if (! e.altKey && ! e.ctrlKey && ! e.metaKey) {
+					e.preventDefault();
+					e.stopPropagation();
+				}
 				// Don't handle keys that are handled by keydown functions
 				// These will all have charCode 0, which is the only way of distinguishing them from chars which have the
 				// same value on Chrome which sets keyCode to match charCode in keypress handlers. (eg in a keydown handler
@@ -684,14 +685,7 @@
     			],
     			multiPlay: true,
 				});
-				$('#input').val('').trigger('focus')
-				.on('blur', function(e) { 
-				  // A small delay seems to be necessary before forcing the focus back
-				  e.preventDefault();
-					setTimeout(function() {
-						$('#input').trigger('focus'); 
-					}, 20); 
-				})
+				$(document)
 				.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
 					// console.log("keydown: " + e.which + " keydown_mutex " + keydown_mutex + " keypress_mutex " + keypress_mutex);
 					keydown(e); 
@@ -708,8 +702,6 @@
 		</script>
 	</head>
 	<body>
-		<textarea id="input">
-		</textarea>
 		<div class="topbar">
 			<div class="title">
 				<h1><img src="images/overtype_logo.png" alt="OverType" height="40"></h1>
@@ -763,6 +755,7 @@
 			</h2>
 			<div class="instruct">
 				<ul>
+					<li>You need to be on a computer with a keyboard. Mobile touchscreen devices won't work.</li>
 					<li>Make sure you have your sound turned on for the fully-immersive experience!</li>
 					<li>If it stops working or to see this text again, just reload the page.</li>
 					<li>As well as just typing normally, you might like try these:
@@ -811,6 +804,12 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.23 (2014-03-05)
+				</h3>
+				<ul>
+					<li>Do away with the off-screen textarea altogether; just bind the event handlers to $(document).</li>
+				</ul>
 				<h3>
 					version 1.22 (2014-02-27)
 				</h3>
