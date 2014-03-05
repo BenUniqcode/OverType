@@ -755,7 +755,7 @@
 			</h2>
 			<div class="instruct">
 				<ul>
-					<li>You need to be on a computer with a keyboard. Mobile touchscreen devices won't work.</li>
+					<li>You need to be on a computer with a keyboard. Mobile touchscreen devices won't work (see Known Bugs below).</li>
 					<li>Make sure you have your sound turned on for the fully-immersive experience!</li>
 					<li>If it stops working or to see this text again, just reload the page.</li>
 					<li>As well as just typing normally, you might like try these:
@@ -783,7 +783,7 @@
 			<ul>
 				<li>On Safari, the sounds are not synchronised. This is a Safari issue, and there doesn't seem to be anything I can do about it. Use Firefox or Chrome instead.</li>
 				<li>Because I have to use the 'keydown' and 'keyup' events rather than 'keypress', I get keycodes rather than characters, and have to map them to characters myself. If you don't have a UK Mac keyboard then some of the symbols probably will not match your keyboard.</li>
-				<li>As it stands, this site is unlikely ever to work on a mobile touchscreen device, due to the problems of dealing with an on-screen keyboard - forcing it to appear without a visible input field, keeping it there, working around it etc. For mobile use it needs to be a full-blown app with its own input handler, rather than a web thing. I may attempt it at some point, if anyone really wants it.</li>
+				<li>As it stands, this site is unlikely ever to work on a mobile touchscreen device, due to the problems of dealing with an on-screen keyboard. If I use the device's own on-screen keyboard there are issues with forcing it to appear without a visible input field, keeping it there, working around it etc. I've tried making my own virtual keyboard instead (a bunch of <code>&lt;button&gt;</code>s with handlers attached to touch events) which kinda works but is rather sluggish, and there are issues with the sounds. I think for mobile use it will need to be a full-blown app with its own input handler, rather than a web app. I may attempt it at some point, if anyone really wants it.</li>
 			</ul>
 			<h2>
 				Improvements I'd like to make
