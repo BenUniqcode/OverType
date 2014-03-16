@@ -6,7 +6,7 @@
 		<style type="text/css" media="all">
 			body {
 				font-family: Helvetica, sans-serif;
-				font-size: 10pt;
+				font-size: 12px;
 				background-color: #eee;
 				margin: 0;
 			}
@@ -64,11 +64,10 @@
 				left: 5em;
 				top: 3em;
 				margin-bottom: 2em;
-				width: 48em;
-				height: 120ex;
+				width: 52em;
+				height: 160ex;
 				background-color: white;
 				border: 1px solid black;
-				padding: 8ex 2em;
 				box-shadow: 8px 8px 4px #888;
 				white-space: nowrap;
 				z-index: 2;
@@ -104,7 +103,7 @@
 			}
 		</style>
 		<style type="text/css" media="print">
-			.cursor, .title, .instruct { display: none }
+			.cursor, .title, .info, .info-btn, .controls, .topbar { display: none !important; }
 			.output { left: 0 !important; top: 0 !important; box-shadow: none; border: none; padding: 10ex 0 0 0; }			
 		</style>
 		<!-- jQuery -->
@@ -151,7 +150,7 @@
 			};
 			var real_shifted = {};
 			var x = max_width * xpx / 2;
-			var y = 0;
+			var y = ypx;
 			var backspaces = 0;
 			var vmid = $(window).height() / 2;
 			var hmid = $(window).width() / 2;
@@ -804,6 +803,13 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.24 (2014-03-16)
+				</h3>
+				<ul>
+					<li>Fix printing, which got broken in a previous version.</li>
+				</ul>
+				<h3>
 				<h3>
 					version 1.23 (2014-03-05)
 				</h3>
