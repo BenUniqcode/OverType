@@ -160,6 +160,7 @@
 			var ink_variation = 0.3;
 			var keydown_mutex = false;
 			var keypress_mutex = false;
+			var cr_mutex = false;
 			var keydown_keycode = false;
 			var shift_mutex = false;
 			var alt_mutex = false;
@@ -223,9 +224,10 @@
 			}
 
 			function keydown_enter(e) {
-				// Although this is a keydown handler, it must also set keypress_mutex to prevent chars being typed during a return
-				// as it apparently does not cause a keypress event itself.
-				keypress_mutex = true;				
+				// Carriage return sets its own mutex, which prevents any other key from working until the return has finished.
+				// (Previously, I just set the keypress_mutex here, but then that would be cleared by any other keypress, so 
+				// it was still possible to type during a return.)
+				cr_mutex = true;
 				e.preventDefault();
 				// If we're not already at the beginning of the line, start playing the return motion sound
 				if (x > 0) {
@@ -253,9 +255,9 @@
 						left: (hmid - x) + 'px',
 						top: (vmid - y) + 'px',
 					}, 100);
-					keydown_mutex = false;
-					keypress_mutex = false;
 					keydown_keycode = false;
+					keydown_mutex = false;
+					cr_mutex = false;
 				}); 
 			}
 			
@@ -336,6 +338,10 @@
 				if (! e.altKey && ! e.ctrlKey && ! e.metaKey) {
 					e.preventDefault();
 					e.stopPropagation();
+				}
+				// If we are in the middle of a CR, ignore completely
+				if (cr_mutex) {
+					return;
 				}
 				// Don't handle keys that are handled by keydown functions
 				// These will all have charCode 0, which is the only way of distinguishing them from chars which have the
@@ -539,6 +545,10 @@
 			function keydown(e) {	
 				if (! started) {
 					start();
+				}
+				// If we are in the middle of a CR, ignore it
+				if (cr_mutex) {
+					return;
 				}
 				switch (e.which) {
 					case 16:
@@ -798,6 +808,12 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.26 (2015-03-07)
+				</h3>
+				<ul>
+					<li>While a CR is in progress, ignore all other keys. Previously it was possible to prematurely type characters at the beginning of the next line before the CR had completed.</li>
+				</ul>
 				<h3>
 					version 1.25 (2015-03-07)
 				</h3>
