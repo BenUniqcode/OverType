@@ -107,13 +107,12 @@
 			.output { left: 0 !important; top: 0 !important; box-shadow: none; border: none; padding: 10ex 0 0 0; }			
 		</style>
 		<!-- jQuery -->
-		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-		<script type="text/javascript">window.jQuery || document.write( '<script type="text/javascript" src="assets/ion_sound_1.3.0/js/vendor/jquery-1.10.2.min.js"><\/script>' )</script>
+		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 		<!-- jQuery-UI -->
-		<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css" />
-		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>		
+		<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.3/themes/smoothness/jquery-ui.css" />
+		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.3/jquery-ui.min.js"></script>		
 		<!-- ION.Sound -->
-		<script type="text/javascript" src="assets/ion_sound_1.3.0/js/ion-sound/ion.sound.min.js"></script>
+		<script type="text/javascript" src="assets/ion.sound-3.0.0/ion.sound.min.js"></script>
 		
 		<script type="text/javascript">
 			// "use strict";
@@ -610,8 +609,7 @@
 			// Special keyup handling is necessary for caps lock
 			// On Firefox/Mac, each press of caps lock only fires keydown
 			// On Chrome/Mac, the first press of caps lock only fires keydown, and the second press only fires keyup,
-			// as if the key had been held down for all the time that its light was on. (Safari is the same, but we discourage
-			// use of Safari anyway).
+			// as if the key had been held down for all the time that its light was on. (Safari is the same.)
 			// On other browsers, it behaves like a normal key, ie it gets a keydown event when first pressed, 
 			// possibly further keydown events on auto-repeat, and a keyup event when released.
 			// So everything apart from Chrome/Mac can be handled by a keydown handler as long as it's not held down
@@ -639,9 +637,6 @@
     		if (! rgba_check()) {
     			$('.warning-rgba').dialog();
     			return false;
-    		}
-    		if (navigator.userAgent.match(/[Ss]afari/) && ! navigator.userAgent.match(/[Cc]hrome/)) { // Not perfect but this is only for advisory purposes
-    			$('.warning-safari').dialog();
     		}
 				// Sliders
 				$('#ctrl_brokenness').slider({
@@ -674,15 +669,16 @@
 				$('.cursor').css('top', vmid + 46).css('left', hmid + 31); // Magic numbers basically arrived at by trial and error...
 				$.ionSound({
 					path: "assets/typewriter_sounds/",
-    			sounds: [
-        		"typewriter-keydown-2",
-        		"typewriter-keyup-2",
-        		"typewriter-carriage-return-main",
-        		"typewriter-carriage-return-stop",
-        		"typewriter-spacebar",
-        		"typewriter-bell-2",
-    			],
-    			multiPlay: true,
+    					sounds: [
+        					{ name: "typewriter-keydown-2" },
+        					{ name: "typewriter-keyup-2" },
+        					{ name: "typewriter-carriage-return-main" },
+        					{ name: "typewriter-carriage-return-stop" },
+        					{ name: "typewriter-spacebar" },
+        					{ name: "typewriter-bell-2" },
+    					],
+    					multiplay: true,
+					preload: true,
 				});
 				$(document)
 				.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
@@ -780,7 +776,6 @@
 				Known bugs
 			</h2>
 			<ul>
-				<li>On Safari, the sounds are not synchronised. This is a Safari issue, and there doesn't seem to be anything I can do about it. Use Firefox or Chrome instead.</li>
 				<li>Because I have to use the 'keydown' and 'keyup' events rather than 'keypress', I get keycodes rather than characters, and have to map them to characters myself. If you don't have a UK Mac keyboard then some of the symbols probably will not match your keyboard.</li>
 				<li>As it stands, this site is unlikely ever to work on a mobile touchscreen device, due to the problems of dealing with an on-screen keyboard. If I use the device's own on-screen keyboard there are issues with forcing it to appear without a visible input field, keeping it there, working around it etc. I've tried making my own virtual keyboard instead (a bunch of <code>&lt;button&gt;</code>s with handlers attached to touch events) which kinda works but is rather sluggish, and there are issues with the sounds. I think for mobile use it will need to be a full-blown app with its own input handler, rather than a web app. I may attempt it at some point, if anyone really wants it.</li>
 			</ul>
@@ -803,6 +798,13 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.25 (2015-03-07)
+				</h3>
+				<ul>
+					<li>Upgraded Ion.Sound to 3.0.0 (and use latest jQuery and jQueryUI while we're at it).</li>
+					<li>The Ion.Sound upgrade fixes the problems with sound synchronisation on Safari, so removed all the warnings about not using it.</li>
+				</ul>
 				<h3>
 					version 1.24 (2014-03-16)
 				</h3>
@@ -1017,9 +1019,6 @@
 		<!-- Warnings which may be displayed modally -->
 		<div class="warning-rgba" style="display: none; font-size: 18px; color: red;">
 			<b>You <em>really</em> need to upgrade your web browser.</b> OverType will not work on your browser because it does not support rgba() colours. They've been around for a long time now, so your browser must be pretty old. Using a very old web browser to surf the net means an ever-increasing number of sites will not work properly for you, and may be <em>unsafe</em> due to security holes which have long-since been fixed. Do yourself a favour and upgrade to a modern browser. 
-		</div>
-		<div class="warning-safari" style="display: none">
-			It looks like you are using Safari. I recommend you use a different browser. At the time of this writing, Safari has a bug (or what Apple consider a deliberate feature) which makes it impossible to synchronise the sound effects properly. Any modern Firefox, Chrome or IE will give you a better result.
 		</div>
 	</body>
 </html>
