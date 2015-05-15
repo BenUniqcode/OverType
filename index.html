@@ -7,7 +7,7 @@
 			body {
 				font-family: Helvetica, sans-serif;
 				font-size: 12px;
-				background-color: #eee;
+				background-color: #555;
 				margin: 0;
 			}
 			h1 {
@@ -28,19 +28,19 @@
 				position: fixed;
 				top: 0;
 				left: 0;
-				background-color: #aaa;
+				background-color: white;
 				z-index: 5;
 				padding: 1ex 2% 2px 1%;
 				height: 10ex;
 				width: 97%;
 			}
 			.info {
-				position: absolute;
 				top: 6em;
-				padding: 1em;
-				width: 70%;
+				padding: 10em 1em;
+				max-width: 1024px;
 				margin-left: auto;
 				margin-right: auto;
+				background-color: #eee;
 			}
 			.info-btn {
 				position: fixed;
@@ -52,6 +52,7 @@
 			.instruct {
 				font-size: 18px;
 				color: #666;
+				background-color: #eee;
 			}
 			.instruct ul ul {
 				font-size: 16px;
@@ -67,6 +68,7 @@
 				width: 52em;
 				height: 160ex;
 				background-color: white;
+				background-image: url(http://subtlepatterns.com/patterns/handmadepaper.png);
 				border: 1px solid black;
 				box-shadow: 8px 8px 4px #888;
 				white-space: nowrap;
@@ -93,7 +95,7 @@
 				width: 140px;
 				margin: 0 1ex;
 			}
-			.control p {
+			.control h4 {
 				margin: 0 0 8px 0;
 				text-align: center;
 			}
@@ -113,6 +115,8 @@
 		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.3/jquery-ui.min.js"></script>		
 		<!-- ION.Sound -->
 		<script type="text/javascript" src="assets/ion.sound-3.0.0/ion.sound.min.js"></script>
+		<!-- Special Elite font -->
+		<link href='http://fonts.googleapis.com/css?family=Special+Elite' rel='stylesheet' type='text/css'>
 		
 		<script type="text/javascript">
 			// "use strict";
@@ -201,6 +205,11 @@
 				e.preventDefault();					
 				if (redshift_lock) {
 					return false;
+				}
+				if (redshift) {
+					// Already being held down
+					// For some reason, esc is auto-repeating and triggering keydown repeatedly when held.
+					return true;
 				}
 				$.ionSound.play('typewriter-spacebar');
 				redshift = true;
@@ -603,16 +612,16 @@
 					}
 					redshift = false;
 				} else if (keydown_mutex && e.which != 13) { // CR does its own sound and mutex release
+					if (keypress_mutex) {
+						move_page();
+					}
 					// Play the key release sound and release the mutexes after a short delay
 					setTimeout(function() {
 						$.ionSound.play('typewriter-keyup-2');
 						keydown_mutex = false;
 						keypress_mutex = false;
 						keydown_keycode = false;
-					}, 65);
-					if (keypress_mutex) {
-						move_page();
-					}
+					}, 5);
 				}
 			}
 
@@ -640,14 +649,19 @@
 				// Check browser supports rgba() colours (stolen from Modernizr)
 				var rgba_check = function() {
 					var elem = document.createElement('div');
-    			var style = elem.style;
-    			style.cssText = 'background-color:rgba(150,255,150,.5)';
-    			return ('' + style.backgroundColor).indexOf('rgba') > -1;
-    		};
-    		if (! rgba_check()) {
-    			$('.warning-rgba').dialog();
-    			return false;
-    		}
+    					var style = elem.style;
+    					style.cssText = 'background-color:rgba(150,255,150,.5)';
+    					return ('' + style.backgroundColor).indexOf('rgba') > -1;
+    				};
+    				if (! rgba_check()) {
+    					$('.warning-rgba').dialog();
+    					return false;
+    				}
+
+				$('.fontsel').change(function() {
+					$('.output').css('font-family', $(this).val());
+				});
+
 				// Sliders
 				$('#ctrl_brokenness').slider({
 					min: 0,
@@ -710,22 +724,34 @@
 		<div class="topbar">
 			<div class="title">
 				<h1><img src="images/overtype_logo.png" alt="OverType" height="40"></h1>
-				<h2 style="margin-bottom: 0">The Over-The-Top Typewriter Simulator</h2>
+				<h2 style="margin-bottom: 0"><img src="images/overtype_subhead.png" alt="The Over-The-Top Typewriter Simulator" height="25"></h2>
 			</div>
 			<div class="controls">
 				<div class="control">
-					<p>
+					<h4 style="text-align: left; margin: 0 0 0 20px">Font</h4>
+					<label>
+						<input class="fontsel" type="radio" name="font" value="Courier, 'Courier New', monospace" checked>
+						Courier
+					</label>
+					<br>
+					<label>
+						<input class="fontsel" type="radio" name="font" value="Special Elite, monospace">
+						Special Elite
+					</label>
+				</div>
+				<div class="control">
+					<h4>
 						Brokenness
-					</p>
+					</h4>
 					<div class="slider" id="ctrl_brokenness">
 					</div>
 					<div class="disp" id="disp_brokenness">
 					</div>
 				</div>
 				<div class="control">
-					<p>
-						Ribbon inkiness
-					</p>
+					<h4>
+						Ribbon Ink
+					</h4>
 					<div class="slider" id="ctrl_inklevel">
 					</div>
 					<div class="disp" id="disp_inklevel">
@@ -808,6 +834,12 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.27 (2015-05-15)
+				</h3>
+				<ul>
+					<li>Choice of fonts. Improved appearance of header. Fix an issue with redshift.</li> 
+				</ul>
 				<h3>
 					version 1.26 (2015-03-07)
 				</h3>
