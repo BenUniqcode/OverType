@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html>
+<!-- OverType: The Over-The-Top Typewriter Simulator, by Ben Wheeler -->
+<!-- Copyright (C) 2014-2015 Ben Wheeler. All rights reserved. Absolutely no warranty, express or implied. -->
 	<head>
 		<meta charset="utf-8"> 
 		<title>OverType - The Over-The-Top Typewriter Simulator</title>
@@ -23,6 +25,9 @@
 			}
 			h3 {
 				font-size: 14px;
+			}
+			dt {
+				font-weight: bold;
 			}
 			.topbar {
 				position: fixed;
@@ -271,6 +276,7 @@
 			
 			function keydown_cursor_up(e) {
 				e.preventDefault();
+				e.stopPropagation(); 
 				if (y > 0) {
 					y -= (ypx / 4);
 					$.ionSound.play('typewriter-spacebar');
@@ -280,6 +286,7 @@
 
 			function keydown_cursor_down(e) {
 				e.preventDefault();
+				e.stopPropagation(); 
 				$.ionSound.play('typewriter-spacebar');
 				y += (ypx / 4);
 				move_page();
@@ -287,6 +294,7 @@
 
 			function keydown_cursor_left(e) {
 				e.preventDefault();
+				e.stopPropagation(); 
 				if (x > 0) {
 					x -= xpx;
 					backspaces++;
@@ -297,6 +305,7 @@
 
 			function keydown_cursor_right(e) {
 				e.preventDefault();
+				e.stopPropagation(); 
 				advance_one_space();
 				$.ionSound.play('typewriter-spacebar');
 				move_page();
@@ -685,6 +694,11 @@
 						ink_remaining = ui.value;
 					},
 				});
+				// When the sliders or font selector are clicked, they gains focus. We don't want them to keep focus or they will use some keypresses.
+				$('.ui-slider-handle, .fontsel').focus(function() {
+					$(this).blur();
+				});
+
 				$('#disp_brokenness').html(brokenness);
 				$('#disp_inklevel').html(ink_remaining);
 				
@@ -763,18 +777,6 @@
 			<button onclick="stop()">Show instructions/info page</button>
 		</div>
 		<div class="info">
-			<h2>
-				Why?
-			</h2>
-			<p>
-				It started because I was trying to tell my kids about how typewriters worked (because of course they've never seen one), and all the existing typewriter simulators that I could find on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed, like a computer. On a real typewriter, backspace simply moves the carriage back one space, allowing you to overtype a previously typed character. Erasing requires Tipp-Ex or suchlike.
-			</p>
-			<p>
-				One day my youngest son suggested I should write one that works the right way and allows overtyping. This seemed like it would be an interesting challenge... and indeed it was. The first version took me about an hour. 
-			</p>
-			<p>
-				Since then it's all got a bit out of hand as I strive to make the program's output "worse" by trying to faithfully re-create some of the other interesting eccentricities of typewriters that have been eliminated in the computer age, such as wobbly and unevenly-inked characters. Thanks to all the beta testers for their great suggestions and feedback.
-			</p>
 			<noscript>
 				<p style="font-size: 36px">
 					<b>You need to <a href="http://enable-javascript.com">enable Javascript in your browser</a> for this to work.</b>
@@ -787,14 +789,13 @@
 				<ul>
 					<li>You need to be on a computer with a keyboard. Mobile touchscreen devices won't work (see Known Bugs below).</li>
 					<li>Make sure you have your sound turned on for the fully-immersive experience!</li>
-					<li>If it stops working or to see this text again, just reload the page.</li>
 					<li>As well as just typing normally, you might like try these:
 						<ul>
 							<li>You can use the cursor keys to move around. The up and down cursors move the roller by a quarter-line.</li>
 							<li>Use [tab] and [shift][tab] to jump forward or back to the nearest tab stop.</li>
-							<li>[esc] is "colour shift", which gives you red text. Or, sometimes, only partly so...</li>
+							<li>Hold down [esc] for "colour shift", which gives you red text. Or, sometimes, only partly so...</li>
 							<li>[shift] and/or [esc] can be locked down by holding one or both and pressing [caps lock] (effectively "shift lock"). Press [caps lock] again to unlock.</li>
-							<li>Move the sliders (see below)</li>
+							<li>Move the sliders (see "Sliders" below)</li>
 							<li>Do a dollar sign the proper way by overtyping a capital <b>S</b> with a <b>|</b> (vertical bar/pipe)</li>
 						</ul>
 					</li>
@@ -811,28 +812,96 @@
 				Known bugs
 			</h2>
 			<ul>
-				<li>Because I have to use the 'keydown' and 'keyup' events rather than 'keypress', I get keycodes rather than characters, and have to map them to characters myself. If you don't have a UK Mac keyboard then some of the symbols probably will not match your keyboard.</li>
 				<li>As it stands, this site is unlikely ever to work on a mobile touchscreen device, due to the problems of dealing with an on-screen keyboard. If I use the device's own on-screen keyboard there are issues with forcing it to appear without a visible input field, keeping it there, working around it etc. I've tried making my own virtual keyboard instead (a bunch of <code>&lt;button&gt;</code>s with handlers attached to touch events) which kinda works but is rather sluggish, and there are issues with the sounds. I think for mobile use it will need to be a full-blown app with its own input handler, rather than a web app. I may attempt it at some point, if anyone really wants it.</li>
 			</ul>
 			<h2>
 				Improvements I'd like to make
 			</h2>
 			<ul>
-				<li>If you type too fast or try to type two keys at once, the mechanism should jam. Amazingly, this is the most commonly requested feature from the beta testers of this program. The only reason I haven't implemented it is the problem of designing a UI to represent unjamming it by picking the mechanism apart, and how to make your fingers inky and oily when you do it.</li>
-				<li>Provide virtual Tipp-Ex.</li>
-				<li>Further suggestions welcome (though remember this is just for fun!) to <a href="mailto:ben@uniqcode.com">ben@uniqcode.com</a>.</li>
+				<li>If you type too fast or try to type two keys at once, the mechanism should sometimes jam, rather than just ignoring the latter keypress. Amazingly, this is the most commonly requested feature from the beta testers of this program. The only reason I haven't implemented it is the problem of designing a UI to represent unjamming it by picking the mechanism apart, and how to make your fingers inky and oily when you do it.</li>
+				<li>Provide virtual Tipp-Ex (aka White-Out / Snopake / Liquid Paper: correction fluid or paper).</li>
+				<li>Choice of paper backgrounds (but of course you are free to choose the paper you feed into your printer anyway!).</li>
+				<li>Further suggestions welcome (please read the FAQ below first, and remember this is just for fun!) to <a href="mailto:ben@uniqcode.com">ben@uniqcode.com</a>.</li>
 			</ul>
+			<h2>
+				FAQ
+			</h2>
+			<dt>Why did you write this?</dt>
+			<dd>
+			<p>
+				It started because I was trying to tell my kids about how typewriters worked (because of course they'd never seen one), so I looked for a typewriter simulator on the web, but all the existing ones that I could find get one very basic thing wrong - when you press backspace, they erase the character you just typed, like a computer. On a real typewriter, backspace simply moves the carriage back one space, allowing you to overtype a previously typed character. Erasing requires Tipp-Ex or suchlike.
+			</p>
+			<p>
+				One day my youngest son suggested I should write one that works the right way and allows overtyping. This seemed like it would be an interesting challenge... and indeed it was. The first version took me about an hour. 
+			</p>
+			<p>
+				Since then it's all got a bit out of hand as I strive to make the program's output "worse" by trying to faithfully re-create some of the other interesting eccentricities of typewriters that have been eliminated in the computer age, such as wobbly and unevenly-inked characters. Thanks to all the beta testers for their great suggestions and feedback.
+			</p>
+			</dd>
+			<dt>Why are some of my keypresses being ignored? / Why can't I type at my usual speed?</dt>
+			<dd>
+			<p>
+				On a manual typewriter, only one (striking) key may be pressed at a time, otherwise at best the second key's hammer gets blocked by the first, and at worst the hammers may get tangled together and require picking apart. OverType replicates this (just the blocking, not the tangling, for now...) by ignoring any keypresses that happen when a character key is already being held down. Because you are used to typing on a computer, you almost certainly overlap your keypresses without even realising it. Be sure to release each key before pressing the next. 
+			</p>
+			</dd>
+			<dt>How do I print what I've typed?</dt>
+			<dd>
+			<p>
+				Just use your browser's standard Print function. It will use the print stylesheet, which omits all the on-screen controls, page border and background, and just print the contents of the page.
+			</p>
+			</dd>
+			<dt>How do I save/export?</dt>
+			<dd>
+			<p>
+				You can use your operating system's "Print to file" function (on a Mac, the "PDF" button in the bottom-left of the Print dialog). As with printing to an actual printer, this will just render the contents of the page, not the controls or background. Alternatively, if you want the background and your text fits on the screen, take a screenshot.
+			</p>
+			</dd>
+			<dt>How can I save as plain text or in Word format for later editing?</dt>
+			<dd>
+			<p>
+				You can't, for two reasons. Firstly, it's completely against the spirit of a manual typewriter. Secondly, the whole purpose of this program is to replicate features of a manual typewriter that computer programs such as word processors and text editors cannot replicate, such as overtyped, unevenly inked, and wobbly characters. If you could export as text you would lose all of that. 
+			</p>
+			</dd>
+			<dt>But I'm a novelist! I want to write my next novel using OverType, but I need to edit as well!</dt>
+			<dd>
+			<p>
+				If you want to write editable text, use a word processor like a sane person. OverType is just a bit of fun and you must be mad to want to write a long piece of work in something that can't correct errors or save your work. Seriously, what is it about novelists? You're at least the fifth one to make the same request...
+			</p>
+			</dd>
+			<dt>Are you watching what I type? / Can I save files on the server?</dt>
+			<dd>
+			<p>
+				The code runs entirely on your machine; no data is sent back to the server.
+			</p>
+			</dd>
+			<dt>I love this so much I want to give you some money / hire you to write code for me!</dt>
+			<dd>
+			<p>
+				That's great, thanks! Donations of any size are always welcome to my Paypal account, ben@qolc.net (please don't email me about OverType at this address - use the one above). 
+			</p>
+			<p>
+				I'm a freelance full-stack LAMP developer with 20 years' experience. My specialities include PHP, Perl, jQuery, Linux sysadmin and MySQL; if you have a job offer to discuss, I'd love to hear from you - please email <a href="mailto:info@uniqcode.com">info@uniqcode.com</a>.
+			</p>
+			</dd>
+			
 			<h2>
 				Credits
 			</h2>
 			<p>
-				For Archie. Developed by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
-				<a href="https://github.com/IonDen/ion.sound">IonSound</a>. Typewriter sound effects from <a href="http://freesound.org">Freesound</a> and <a href="http://www.soundjay.com">SoundJay</a>, some of them edited by me. Tested on Firefox27/Mac and Chrome32/Mac. 			
+				For Archie. Created by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
+				<a href="https://github.com/IonDen/ion.sound">IonSound</a>. Typewriter sound effects from <a href="http://freesound.org">Freesound</a> and <a href="http://www.soundjay.com">SoundJay</a>, some of them edited by me. 
 			</p>
 			<h2>
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.28 (2015-08-03)
+				</h3>
+				<ul>
+					<li>Don't let the sliders or font selector keep focus. This avoids them reacting to certain keypresses (eg cursor keys). Apologies if this causes accessibility problems for anyone.</li>
+					<li>Rearrange instructions page and add FAQ.</li>
+				</ul>
 				<h3>
 					version 1.27 (2015-05-15)
 				</h3>
