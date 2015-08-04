@@ -245,30 +245,32 @@
 					$.ionSound.play('typewriter-carriage-return-main');
 				}
 				$('.output').append('<br/>');
-				line_length = x / xpx;
-				x = 0;
-				backspaces = 0;
+				var line_length = x / xpx;
+				var return_time = 13 * line_length;
 				y += ypx;
-				return_time = 13 * line_length;
 				$('.output').animate({
 					top: (vmid - y) + 'px',
 				}, 100).animate({
-					left: (hmid - x) + 'px',
+					left: hmid + 'px',
 				}, return_time, function() {
 					// When the movement has finished, stop playing the motion sound, play the stop sound, and release the mutexes 
-					$.ionSound.stop('typewriter-carriage-return-main');
+					if (x > 0) {
+						$.ionSound.stop('typewriter-carriage-return-main');
+					}
 					$.ionSound.play('typewriter-carriage-return-stop');
 					// Do a little wobble
 					$('.output').animate({
-						left: (hmid - x + 3) + 'px',
+						left: (hmid + 3) + 'px',
 						top: (vmid - y + 2) + 'px',
 					}, 100).animate({
-						left: (hmid - x) + 'px',
+						left: hmid + 'px',
 						top: (vmid - y) + 'px',
 					}, 100);
 					keydown_keycode = false;
 					keydown_mutex = false;
 					cr_mutex = false;
+					x = 0;
+					backspaces = 0;
 				}); 
 			}
 			
@@ -877,6 +879,13 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.29 (2015-08-04)
+				</h3>
+				<ul>
+					<li>Fixed crash in Safari when enter was pressed twice in a row.</li>
+					<li>Upgrade Ion.Sound to 3.0.5</li>
+				</ul>
 				<h3>
 					version 1.28 (2015-08-03)
 				</h3>
