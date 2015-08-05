@@ -1,7 +1,7 @@
 ﻿/**
  * Ion.Sound
- * version 3.0.0 Build 75
- * © 2014 Denis Ineshin | IonDen.com
+ * version 3.0.6 Build 88
+ * © Denis Ineshin, 2015
  *
  * Project page:    http://ionden.com/a/plugins/ion.sound/en.html
  * GitHub page:     https://github.com/IonDen/ion.sound
@@ -10,7 +10,7 @@
  * http://ionden.com/a/plugins/licence-en.html
  */
 
-(function (window, navigator, $, undefined) {
+;(function (window, navigator, $, undefined) {
     "use strict";
 
     window.ion = window.ion || {};
@@ -29,8 +29,8 @@
                 console.log(text);
             }
 
-            var d = $("#debug");
-            if (d.length) {
+            var d = $ && $("#debug");
+            if (d && d.length) {
                 var a = d.html();
                 d.html(a + text + '<br/>');
             }
@@ -122,22 +122,21 @@
         }
 
         for (i = 0; i < sounds_num; i++) {
-            if (!sounds[i]) {
-                createSound(settings.sounds[i]);
-            }
+            createSound(settings.sounds[i]);
         }
     };
 
-    ion.sound.VERSION = "3.0.0";
+    ion.sound.VERSION = "3.0.6";
 
     ion.sound._method = function (method, name, options) {
         if (name) {
             sounds[name] && sounds[name][method](options);
         } else {
             for (i in sounds) {
-                if (!sounds.hasOwnProperty(i)) {
+                if (!sounds.hasOwnProperty(i) || !sounds[i]) {
                     continue;
                 }
+
                 sounds[i][method](options);
             }
         }
@@ -177,6 +176,10 @@
 
     ion.sound.pause = function (name, options) {
         ion.sound._method("pause", name, options);
+    };
+
+    ion.sound.volume = function (name, options) {
+        ion.sound._method("volume", name, options);
     };
 
     if ($) {
@@ -252,7 +255,7 @@
 
         createUrl: function () {
             var no_cache = new Date().valueOf();
-            this.url = this.options.path + this.options.name + "." + this.options.supported[this.ext] + "?" + no_cache;
+            this.url = this.options.path + encodeURIComponent(this.options.name) + "." + this.options.supported[this.ext] + "?" + no_cache;
         },
 
         load: function () {
@@ -291,7 +294,7 @@
                 return;
             }
 
-            if (this.result.status !== 200) {
+            if (this.result.status !== 200 && this.result.status !== 0) {
                 warn(this.url + " was not found on server!");
                 this.reload();
                 return;
@@ -416,6 +419,31 @@
             } else {
                 this.streams[0].pause();
             }
+        },
+
+        volume: function (options) {
+            var stream;
+
+            if (options) {
+                extend(options, this.options);
+            } else {
+                return;
+            }
+
+            if (this.options.sprite) {
+                if (this.options.part) {
+                    stream = this.streams[this.options.part];
+                    stream && stream.setVolume(this.options);
+                } else {
+                    for (i in this.options.sprite) {
+                        stream = this.streams[i];
+                        stream && stream.setVolume(this.options);
+                    }
+                }
+            } else {
+                stream = this.streams[0];
+                stream && stream.setVolume(this.options);
+            }
         }
     };
 
@@ -465,6 +493,8 @@
                 this.loop = 9999999;
             } else if (typeof options.loop === "number") {
                 this.loop = +options.loop - 1;
+            } else {
+                this.loop = false;
             }
         },
 
@@ -513,14 +543,26 @@
                 return;
             }
 
-            this.source.start(0, start, end);
+            if (typeof this.source.start === "function") {
+                this.source.start(0, start, end);
+            } else {
+                this.source.noteOn(0, start, end);
+            }
+
             this.playing = true;
             this.paused = false;
             this.time_started = new Date().valueOf();
         },
 
         stop: function () {
-            this.source && this.source.stop(0);
+            if (this.playing && this.source) {
+                if (typeof this.source.stop === "function") {
+                    this.source.stop(0);
+                } else {
+                    this.source.noteOff(0);
+                }
+            }
+
             this.clear();
         },
 
@@ -574,6 +616,14 @@
             this.time_offset = 0;
             this.paused = false;
             this.playing = false;
+        },
+
+        setVolume: function (options) {
+            this.volume = options.volume;
+
+            if (this.gain) {
+                this.gain.gain.value = this.volume;
+            }
         }
     };
 
@@ -769,6 +819,31 @@
             } else {
                 this.streams[0].pause();
             }
+        },
+
+        volume: function (options) {
+            var stream;
+
+            if (options) {
+                extend(options, this.options);
+            } else {
+                return;
+            }
+
+            if (this.options.sprite) {
+                if (this.options.part) {
+                    stream = this.streams[this.options.part];
+                    stream && stream.setVolume(this.options);
+                } else {
+                    for (i in this.options.sprite) {
+                        stream = this.streams[i];
+                        stream && stream.setVolume(this.options);
+                    }
+                }
+            } else {
+                stream = this.streams[0];
+                stream && stream.setVolume(this.options);
+            }
         }
     };
 
@@ -831,7 +906,7 @@
 
         createUrl: function () {
             var rand = new Date().valueOf();
-            this.url = this.path + this.name + "." + settings.supported[0] + "?" + rand;
+            this.url = this.path + encodeURIComponent(this.name) + "." + settings.supported[0] + "?" + rand;
         },
 
         can_play_through: function () {
@@ -853,6 +928,8 @@
                 this.loop = 9999999;
             } else if (typeof options.loop === "number") {
                 this.loop = +options.loop - 1;
+            } else {
+                this.loop = false;
             }
         },
 
@@ -984,7 +1061,15 @@
             this.start_time = 0;
             this.played_time = 0;
             this.paused_time = 0;
+        },
+
+        setVolume: function (options) {
+            this.volume = options.volume;
+
+            if (this.sound) {
+                this.sound.volume = this.volume;
+            }
         }
     };
 
-} (window, navigator, jQuery || $));
+} (window, navigator, window.jQuery || window.$));

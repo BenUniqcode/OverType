@@ -21,7 +21,7 @@
 				font-size: 40px;
 			}
 			h2 {
-				margin-top: -5px;
+				margin-top: 0;
 				font-size: 20px;
 			}
 			h3 {
@@ -33,8 +33,8 @@
 				left: 0;
 				background-color: white;
 				z-index: 5;
-				padding: 1ex 2% 2px 1%;
-				width: 97%;
+				padding: 1ex 0% 2px 1%;
+				width: 99%;
 			}
 			.info {
 				top: 6em;
@@ -46,7 +46,7 @@
 			}
 			.info-btn {
 				position: fixed;
-				top: 7em;
+				top: 5.8em;
 				left: 0;
 				z-index: 9;
 				display: none;
@@ -116,7 +116,7 @@
 		<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.3/themes/smoothness/jquery-ui.css" />
 		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.3/jquery-ui.min.js"></script>		
 		<!-- ION.Sound -->
-		<script type="text/javascript" src="assets/ion.sound-3.0.5/ion.sound.min.js"></script>
+		<script type="text/javascript" src="assets/ion.sound-3.0.6/js/ion.sound.min.js"></script>
 		<!-- Special Elite font -->
 		<link href='http://fonts.googleapis.com/css?family=Special+Elite' rel='stylesheet' type='text/css'>
 		
@@ -129,6 +129,8 @@
 			const margin_top = 40, margin_left = 30;
 			const max_brokenness = 99;
 			const max_ink_level = 600;
+			// These values are used for shift lock if we have not yet mapped the real value of the shifted char 
+			// by pressing it with shift held down.
 			const shifted = {
 				'§': '±',
 				'1': '!',
@@ -156,7 +158,6 @@
 			var real_shifted = {};
 			var x = max_width * xpx / 2;
 			var y = ypx;
-			var backspaces = 0;
 			var vmid = $(window).height() / 2;
 			var hmid = $(window).width() / 2;
 			var voffset = {};
@@ -164,8 +165,8 @@
 			var brokenness = 20;
 			var ink_remaining = 400;
 			var ink_variation = 0.3;
-			var keydown_mutex = false;
-			var keypress_mutex = false;
+			var keydown_keys = {};
+			var keypress_keys = {};
 			var cr_mutex = false;
 			var keydown_keycode = false;
 			var shift_mutex = false;
@@ -236,15 +237,12 @@
 
 			function keydown_enter(e) {
 				// Carriage return sets its own mutex, which prevents any other key from working until the return has finished.
-				// (Previously, I just set the keypress_mutex here, but then that would be cleared by any other keypress, so 
-				// it was still possible to type during a return.)
 				cr_mutex = true;
 				e.preventDefault();
 				// If we're not already at the beginning of the line, start playing the return motion sound
 				if (x > 0) {
 					$.ionSound.play('typewriter-carriage-return-main');
 				}
-				$('.output').append('<br/>');
 				var line_length = x / xpx;
 				var return_time = 13 * line_length;
 				y += ypx;
@@ -266,11 +264,9 @@
 						left: hmid + 'px',
 						top: (vmid - y) + 'px',
 					}, 100);
-					keydown_keycode = false;
-					keydown_mutex = false;
 					cr_mutex = false;
+					delete keydown_keys[e.keyCode];
 					x = 0;
-					backspaces = 0;
 				}); 
 			}
 			
@@ -297,7 +293,6 @@
 				e.stopPropagation(); 
 				if (x > 0) {
 					x -= xpx;
-					backspaces++;
 					$.ionSound.play('typewriter-spacebar');
 					move_page();
 				} 
@@ -315,8 +310,6 @@
 			function advance_one_space() {
 				if ((x / xpx) < max_width) {
 					x += xpx;
-				} else {
-					backspaces++; // Fudge hard right margin without position:absolute
 				}
 			}
 
@@ -332,7 +325,6 @@
 						prev_tab_stop = x;
 					}
 					x -= (prev_tab_stop * xpx); 
-					backspaces += prev_tab_stop;
 				} else {
 					var next_tab_stop = tab_width - ((x / xpx) % tab_width);
 					if (next_tab_stop == 0) {
@@ -356,8 +348,9 @@
 					e.preventDefault();
 					e.stopPropagation();
 				}
-				// If we are in the middle of a CR, ignore completely
-				if (cr_mutex) {
+				// If we are in the middle of a CR, ignore this keypress
+				// If this key is already being held down, ignore this keypress (keyboard auto-repeat may fire multiple events)
+				if (cr_mutex || keypress_keys[keydown_keycode]) {
 					return;
 				}
 				// Don't handle keys that are handled by keydown functions
@@ -383,10 +376,13 @@
 							return false;
 					}				
 				}
-				if (keypress_mutex) {
+				// Record the keypress for mutex purposes, even if we're not going to act on it
+				keypress_keys[keydown_keycode] = 1; // Have to use charCode as that's the only one available to both keypress and keyup
+				// Only one printing keypress allowed at a time
+				// console.log('PRESS: ' + keydown_keycode + " keydown_keys " + Object.keys(keydown_keys).toString() + " keypress_keys " + Object.keys(keypress_keys).toString());
+				if (Object.keys(keypress_keys).length > 1) {
 					return false;
 				}
-				keypress_mutex = true;
 				
 				var nosound = false;
 				
@@ -400,18 +396,18 @@
 				} else if (e.shiftKey) {
 					real_shifted[keydown_keycode] = c; // Learn the real shifted char
 					// console.log("Storing " + keydown_keycode + " -> " + c);
-    		} else if (shift_lock) {
-    			if (keydown_keycode > 0 && real_shifted[keydown_keycode]) {
+				} else if (shift_lock) {
+					if (keydown_keycode > 0 && real_shifted[keydown_keycode]) {
 						// Use the real shifted char if we learned it
-    				c = real_shifted[keydown_keycode]; 
+						c = real_shifted[keydown_keycode]; 
 						// console.log("Retrieving " + keydown_keycode + " -> " + c);
     			} else if (shifted[c]) {
 						// Otherwise fall back to the default shifted char mapping
 						// console.log("Using default shiftmap for " + c)
-    				c = shifted[c]; 
+						c = shifted[c]; 
 						// console.log(" -> " + c);
-    			}
-  		  }
+					}
+				}
 
 				if (c.match(/\S/)) {
 					ink_remaining--;
@@ -447,7 +443,7 @@
 						if (Math.random() > 0.7) {
 							broken[c] = '&#9608;'; // full block - as if the embossed character has fallen off the arm.
 						} else {
-							broken[c] = '&nbsp;'; // as if the key doesn't work at all
+							broken[c] = '&nbsp;'; // as if the key doesn't work at all or is missing
 							nosound = true;
 						}
 					}
@@ -525,15 +521,22 @@
 			}
 
 			function keydown_nonmod(e) {
-				// Only one non-modifier key may be pressed at a time
-				if (keydown_mutex) {
+				// Because the keypress event does not make keyCode available for normal chars, we have to store it in the keydown handler
+				// so it can be referenced in the keypress handler to relate shifted chars to their keys so we can retrieve them 
+				// when shiftlock is on. This relies on the keydown event firing before the keypress event, and getting at least as 
+				// far as setting keydown_keycode before the keypress handler reads it. This is the kind of yucky race condition it's
+				// normally best to avoid, but in practice it seems to Just Work in all the browsers I've tried.
+				// We need to store this value whether or not we do anything with this keydown, so that the associated keypress event
+				// gets the right one even if multiple keys are being held down.
+				keydown_keycode = e.keyCode;
+
+				// Always record the keydown for mutex purposes, even if we aren't going to act on it
+				keydown_keys[e.keyCode] = 1;
+				// console.log('DOWN: ' + e.keyCode + " keydown_keys " + Object.keys(keydown_keys).toString() + " keypress_keys " + Object.keys(keypress_keys).toString());
+				// Only one non-modifier key may be pressed at a time. So if this is the 2nd or subsequent being held, ignore this one.
+				if (Object.keys(keydown_keys).length > 1) {
 					return false;
 				}
-				keydown_mutex = true;
-				// Because the keypress event does not make keycode available for normal chars, we have to store it in the keydown handler
-				// so it can be referenced in the keypress handler to relate shifted chars to their keys so we can retrieve them 
-				// when shiftlock is on. 
-				keydown_keycode = e.keyCode; 
 				switch (e.which) {
 					case 9:  // tab
 						keydown_tab(e);
@@ -563,8 +566,13 @@
 				if (! started) {
 					start();
 				}
-				// If we are in the middle of a CR, ignore it
-				if (cr_mutex) {
+				// If we are in the middle of a CR, ignore this key entirely
+				if (cr_mutex) { 
+					return;
+				}
+				// If this key is already being held down, ignore it (keyboard auto-repeat may fire multiple events)
+				// UNLESS it's a cursor key - we allow auto-repeat on those because otherwise moving is tedious.
+				if (keydown_keys[e.keyCode] && (e.keyCode < 37 || e.keyCode > 40)) {
 					return;
 				}
 				switch (e.which) {
@@ -600,6 +608,8 @@
 					top: (vmid - y) + 'px',
 					left: (hmid - x) + 'px',
 				}, 20);
+				// If the page is not centred, centre it
+				$('html,body').scrollTop(vmid - y - 500);
 			}
 
 			// Handler for keyup events
@@ -619,16 +629,16 @@
 						$.ionSound.play('typewriter-keyup-2');
 					}
 					redshift = false;
-				} else if (keydown_mutex && e.which != 13) { // CR does its own sound and mutex release
-					if (keypress_mutex) {
+				} else if (Object.keys(keydown_keys).length && e.which != 13) { // CR does its own sound and mutex release
+					// console.log('UP: ' + e.keyCode + " keydown_keys " + Object.keys(keydown_keys).toString() + " keypress_keys " + Object.keys(keypress_keys).toString());
+					if (Object.keys(keypress_keys).length == 1) { // Only move the page if this is the last keypress being held
 						move_page();
 					}
 					// Play the key release sound and release the mutexes after a short delay
 					setTimeout(function() {
 						$.ionSound.play('typewriter-keyup-2');
-						keydown_mutex = false;
-						keypress_mutex = false;
-						keydown_keycode = false;
+						delete keydown_keys[e.keyCode];
+						delete keypress_keys[e.keyCode];
 					}, 5);
 				}
 			}
@@ -717,17 +727,20 @@
     					multiplay: true,
 					preload: true,
 				});
+				// Have to use both keydown and keypress events.
+				// keypress doesn't fire for backspace in Chrome, and modifier keys in general.
+				// keydown only gives us key codes, not the character that they should produce on this specific keyboard.
 				$(document)
-				.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
-					// console.log("keydown: " + e.which + " keydown_mutex " + keydown_mutex + " keypress_mutex " + keypress_mutex);
+				.on('keydown', function(e) { 
+					// console.log("keydown: " + e.which + " keydown_keys " + Object.keys(keydown_keys).toString() + " keypress_keys " + Object.keys(keypress_keys).toString());
 					keydown(e); 
 				})
 				.on('keypress', function(e) {
-					// console.log("keypress: " + e.which + " keydown_mutex " + keydown_mutex + " keypress_mutex " + keypress_mutex);
+					// console.log("keypress: " + e.which + " keydown_keys " + Object.keys(keydown_keys).toString() + " keypress_keys " + Object.keys(keypress_keys).toString());
 					keypress(e);
 				})
 				.on('keyup', function(e) {
-					// console.log("keyup: " + e.which + " keydown_mutex " + keydown_mutex + " keypress_mutex " + keypress_mutex);
+					// console.log("keyup: " + e.which + " keydown_keys " + Object.keys(keydown_keys).toString() + " keypress_keys " + Object.keys(keypress_keys).toString());
 					keyup(e);
 				}); // on()
 			}); //$()
@@ -812,7 +825,8 @@
 				Known bugs
 			</h2>
 			<ul>
-				<li>As it stands, this site is unlikely ever to work on a mobile touchscreen device, due to the problems of dealing with an on-screen keyboard. If I use the device's own on-screen keyboard there are issues with forcing it to appear without a visible input field, keeping it there, working around it etc. I've tried making my own virtual keyboard instead (a bunch of <code>&lt;button&gt;</code>s with handlers attached to touch events) which kinda works but is rather sluggish, and there are issues with the sounds. I think for mobile use it will need to be a full-blown app with its own input handler, rather than a web app. I may attempt it at some point, if anyone really wants it.</li>
+				<li>As it stands, this site is unlikely ever to work on a touchscreen device without a real keyboard, due to the problems of dealing with an on-screen keyboard. If I use the device's own on-screen keyboard there are issues with forcing it to appear without a visible input field, keeping it there, working around it etc. I've tried making my own virtual keyboard instead (a bunch of <code>&lt;button&gt;</code>s with handlers attached to touch events) which kinda works but is rather sluggish, and there are issues with the sounds. I think for mobile use it will need to be a full-blown app with its own input handler, rather than a web app. I may attempt it at some point, if anyone really wants it.</li>
+				<li>If shift lock is on, and you press a non-alphabetic character key that you have not yet pressed in conjunction with shift, the program has no way of knowing what the shifted character should be for your particular keyboard, so it will default to using the shift characters from my UK Apple keyboard. Once you have pressed a key in conjunction with shift, the program remembers the correct shift character for that key and will use it when shift lock is on.</li>
 			</ul>
 			<h2>
 				Improvements I'd like to make
@@ -839,6 +853,9 @@
 			<h3>Why are some of my keypresses being ignored? / Why can't I type at my usual speed?</h3>
 			<p>
 				On a manual typewriter, only one (striking) key may be pressed at a time, otherwise at best the second key's hammer gets blocked by the first, and at worst the hammers may get tangled together and require picking apart. OverType replicates this (just the blocking, not the tangling, for now...) by ignoring any keypresses that happen when a character key is already being held down. Because you are used to typing on a computer, you almost certainly overlap your keypresses without even realising it. Be sure to release each key before pressing the next. 
+			</p>
+			<p>
+				Likewise, you cannot type during a carriage return. You have to wait for it to finish.
 			</p>
 			<h3>How do I print what I've typed?</h3>
 			<p>
@@ -875,6 +892,14 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.30 (2015-08-05)
+				</h3>
+				<ul>
+					<li>Always scroll the viewport to the current typing position when typing - useful if you've been scrolling through the instructions.</li>
+					<li>Replace the simplistic keydown and keypress mutexes with records of *which* keys are being held down; this allows us to ignore keyboard auto-repeat, and only advance and allow further typing when all keys have been released.</li>
+					<li>Upgrade Ion.Sound to 3.0.6</li>
+				</ul>
 				<h3>
 					version 1.29 (2015-08-04)
 				</h3>
