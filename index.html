@@ -345,7 +345,11 @@
 				e.preventDefault();
 				e.stopPropagation(); 
 				advance_one_space();
-				$.ionSound.play('typewriter-spacebar');
+				if ((x / xpx) == bell_width) {
+					$.ionSound.play('typewriter-bell-2');
+				} else {
+					$.ionSound.play('typewriter-spacebar');
+				}
 				move_page();
 			} 
 			
@@ -503,7 +507,7 @@
 				if (c.match(/\S/)) {
 					ink_remaining--;
 				}
-																
+				
 				if ((x / xpx) == bell_width) {
 					$.ionSound.play('typewriter-bell-2');
 				} else if (! nosound) {
