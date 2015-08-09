@@ -44,7 +44,7 @@
 				margin-right: auto;
 				background-color: #eee;
 			}
-			.info-btn {
+			.btn {
 				position: fixed;
 				top: 5.8em;
 				left: 0;
@@ -59,16 +59,22 @@
 			.instruct ul ul {
 				font-size: 16px;
 			}
-			.output {
+			#Carriage {
 				font-family: Courier, "Courier New", monospace;
 				font-size: 20px;
 				line-height: 30px;
 				position: absolute;
 				left: 5em;
 				top: 3em;
+				height: 165ex;
+			}
+			.output {
 				margin-bottom: 2em;
+				position: relative; /* within position:absolute #Carriage */
 				width: 52em;
 				height: 160ex;
+				left: 0;
+				top: 0;
 				background-color: white;
 				background-image: url(http://subtlepatterns.com/patterns/handmadepaper.png);
 				border: 1px solid black;
@@ -77,14 +83,27 @@
 				z-index: 2;
 				display: none;
 			}
+			.tippex {
+				position: absolute; /* overlays .output, but still relative to #Carriage */
+				width: 51em;
+				height: 120px;
+				left: 10px;
+				top: -200px; /* Starts off the top of the screen */
+				background-color: white;
+				border: 1px solid black;
+				box-shadow: 4px 4px 2px #888;
+				z-index: 3;
+				display: none;
+			}
 			.cursor {
 				position: absolute;
-				z-index: 3;
+				z-index: 4;
 				width: 12px;
 				height: 20px;
 				border-bottom: 2px solid red;
 				display: none;
 			}
+				
 			.title {
 				float: left;
 			}
@@ -107,7 +126,7 @@
 			}
 		</style>
 		<style type="text/css" media="print">
-			.cursor, .title, .info, .info-btn, .controls, .topbar { display: none !important; }
+			.cursor, .title, .info, .btn, .controls, .topbar, .tippex { display: none !important; }
 			.output { left: 0 !important; top: 0 !important; box-shadow: none; border: none; padding: 10ex 0 0 0; background-image: none; }
 		</style>
 		<!-- jQuery -->
@@ -176,16 +195,35 @@
 			var redshift = false;
 			var shift_lock = false;
 			var redshift_lock = false;
+			var tippex_mode = false;
 
 			function start() {			
 				$('.info').hide();
-				$('.info-btn, .output, .cursor').show();
+				$('.btn, .output, .cursor').show();
 				started = true;
 			}
 			function stop() {
-				$('.info-btn, .output, .cursor').hide();
+				$('.btn, .output, .cursor').hide();
 				$('.info').show();
 				started = false;
+			}
+			function tippex_start() {
+				tippex_mode = true;
+				$('#TippexStart').hide();
+				$('#TippexStop').show();
+				$('.tippex').show().animate({
+					top: y - ypx - 20,
+				}, 200);
+			}
+			function tippex_stop() {
+				tippex_mode = false;
+				$('#TippexStop').hide();
+				$('#TippexStart').show();
+				$('.tippex').animate({
+					top: -200,
+				}, 200, function() {
+					$(this).hide();
+				});
 			}
 			
 			function keydown_capslock(e) {
@@ -236,9 +274,14 @@
 			}
 
 			function keydown_enter(e) {
-				// Carriage return sets its own mutex, which prevents any other key from working until the return has finished.
+				// Carriage return sets its own mutex, which prevents any other keydown (including another enter) 
+				// from working until the return has finished.
 				cr_mutex = true;
 				e.preventDefault();
+				// I can't think of a decent way of keeping tippex in use past a CR - it needs to be repositioned. So, if active, switch it off.
+				if (tippex_mode) {
+					tippex_stop();
+				}
 				// If we're not already at the beginning of the line, start playing the return motion sound
 				if (x > 0) {
 					$.ionSound.play('typewriter-carriage-return-main');
@@ -246,7 +289,7 @@
 				var line_length = x / xpx;
 				var return_time = 13 * line_length;
 				y += ypx;
-				$('.output').animate({
+				$('#Carriage').animate({
 					top: (vmid - y) + 'px',
 				}, 100).animate({
 					left: hmid + 'px',
@@ -257,7 +300,7 @@
 					}
 					$.ionSound.play('typewriter-carriage-return-stop');
 					// Do a little wobble
-					$('.output').animate({
+					$('#Carriage').animate({
 						left: (hmid + 3) + 'px',
 						top: (vmid - y + 2) + 'px',
 					}, 100).animate({
@@ -409,13 +452,6 @@
 					}
 				}
 
-				if (c.match(/\S/)) {
-					ink_remaining--;
-				}
-												
-				// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
-				var ink_level = (ink_remaining > 0) ? ink_remaining / 400 - ink_variation + Math.random() * ink_variation : 0;
-								
 				// Vertical offset
 				if (! (c in voffset)) {
 					voffset[c] = {
@@ -453,61 +489,21 @@
 
 				// Output the character, unless it's broken
 				if (broken[c]) {
-					$('.output').append('<div style="position: absolute; top: ' + (y + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + ');">' + broken[c] + '</div>');
-				} else {
-					var black_height = ypx;
-					var black_height_style = '', red_height_style = '';
-					// TODO: Make high brokenness do partial red chars sometimes without redshift
-					//       The relative probabilities of black and red need to be the opposite of what they are for redshift 
-					//       but without reversing the relative positions. voffset also needs to work oppositely.
-					//       I think I need to track the position of the print head relative to the ribbon.
-					if (redshift || redshift_lock) {
-						if (Math.random() < brokenness / 100) {
-							// Colour part of the character black, to simulate not pressing Colour Shift hard enough.
-							// Black height depends on brokenness level and voffset. As the black creeps in from the top,
-							// a char with high negative voffset (shifted upwards) will be more blackened.
-							// +ypx-char_height because that is empty space before the top of the visible character.
-							black_height = Math.floor(Math.random() * ypx * brokenness / 250) + ypx - char_height - this_voffset;
-							if (black_height < 0) {
-								black_height = 0; // All red
-								red_height_style = '';
-							} else {
-								black_height_style = 'clip: rect(0px, ' + xpx + 'px, ' + black_height + 'px, 0px); ';
-								red_height_style   = 'clip: rect(' + black_height + 'px, ' + xpx + 'px, ' + ypx + 'px, 0px); ';
-							}
-						} else {
-							black_height = 0;
-							red_height_style = '';
-						}
-						// Output the (possibly partial) character in red					
-						$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(255, 0, 0, ' + ink_level + '); ' + red_height_style + '">' + c + '</div>');
-					} 
-					if (black_height > 0) {
-						// Output the (possibly partial) character in black
-						$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + '); ' + black_height_style + '">' + c + '</div>');
-						
-						// Maybe output further subcropped character(s) in black to make the colouring more uneven
-						for (var subclips = 0; subclips < 3; subclips++) {
-							var subclip_right = Math.floor(Math.random() * xpx) + 1;
-							var subclip_left = Math.floor(Math.random() * subclip_right);
-							var subclip_bottom = Math.floor(Math.random() * black_height) + 1;
-							var subclip_top = Math.floor(Math.random() * subclip_bottom);
-							var r = Math.random();
-							var sign = Math.random() < 0.5 ? -1 : 1;
-							var b = brokenness / (max_brokenness + 1); // max_brokenness is 99, but let's use a percentage
-							var i = ink_remaining / max_ink_level;
-							// Thanks to John Valentine for help with the following formula
-							var subclip_opacity = i * (0.5 + 0.5 * Math.sqrt(r * b) * sign); 
-							var subclip_color = 'color: rgba(0, 0, 0, ' + subclip_opacity + '); ';
-							var subclip_clip = 'clip: rect(' + subclip_top + 'px, ' + subclip_right + 'px, ' + subclip_bottom + 'px, ' + subclip_left + 'px); ';
-							// console.log("sign: " + sign + " r: " + r + " b:" + b + " i: " + i + " result: " + subclip_opacity);
-							$('.output').append('<div style="position: absolute; top: ' + (y + this_voffset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; ' + subclip_color + subclip_clip + '">' + c + '</div>');
-						}
-					}
+					c = broken[c];
+				}
+
+				output_character(c, this_voffset, '.output');
+				// If tippex is in use, that does a white character output onto the output. We also need a regular one onto the tippex sheet.
+				if (tippex_mode) {
+					output_character(c, this_voffset, '.tippex');
 				}
 
 				advance_one_space();
-				
+
+				if (c.match(/\S/)) {
+					ink_remaining--;
+				}
+																
 				if ((x / xpx) == bell_width) {
 					$.ionSound.play('typewriter-bell-2');
 				} else if (! nosound) {
@@ -519,6 +515,79 @@
 				$('#ctrl_inklevel').slider('option', 'value', ink_remaining);
 				$('#disp_inklevel').html(ink_remaining);
 			}
+
+			function output_character(c, this_voffset, where) {
+				// Choose an alpha level with a random element to simulate uneven key pressure and ribbon ink
+				var ink_level = (ink_remaining > 0) ? ink_remaining / 400 - ink_variation + Math.random() * ink_variation : 0;
+				// In tippex output, this needs adjusting otherwise it always requires multiple strikes to correct a character
+				// even when the ink remaining is high. 
+				if (tippex_mode && where == '.output') {
+					ink_level += 0.3;
+				}
+				console.log(ink_level);
+				
+				var hpos = 'left: ' + (x + margin_left) + 'px; ';
+				var vpos = 'top: ' + (y + this_voffset + margin_top) + 'px; ';
+				if (tippex_mode && where == '.tippex') {
+					hpos = 'left: ' + (x + margin_left - xpx + 2) + 'px; ';
+					vpos = 'top: 90px; ';
+				}
+								
+				var black_height = ypx;
+				var black_height_style = '', red_height_style = '';
+				var base_colour = '0,0,0';
+				if (tippex_mode && where == '.output') {
+					base_colour = '255,255,255';
+				}
+				// TODO: Make high brokenness do partial red chars sometimes without redshift, and/or permanently lose part of the char.
+				//       The relative probabilities of black and red need to be the opposite of what they are for redshift 
+				//       but without reversing the relative positions. voffset also needs to work oppositely.
+				//       I think I need to track the position of the print head relative to the ribbon.
+				if ((redshift || redshift_lock) && !tippex_mode) {
+					if (Math.random() < brokenness / 100) {
+						// Colour part of the character black, to simulate not pressing Colour Shift hard enough.
+						// Black height depends on brokenness level and voffset. As the black creeps in from the top,
+						// a char with high negative voffset (shifted upwards) will be more blackened.
+						// +ypx-char_height because that is empty space before the top of the visible character.
+						black_height = Math.floor(Math.random() * ypx * brokenness / 250) + ypx - char_height - this_voffset;
+						if (black_height < 0) {
+							black_height = 0; // All red
+							red_height_style = '';
+						} else {
+							black_height_style = 'clip: rect(0px, ' + xpx + 'px, ' + black_height + 'px, 0px); ';
+							red_height_style   = 'clip: rect(' + black_height + 'px, ' + xpx + 'px, ' + ypx + 'px, 0px); ';
+						}
+					} else {
+						black_height = 0;
+						red_height_style = '';
+					}
+					// Output the (possibly partial) character in red					
+					$(where).append('<div style="position: absolute; ' + vpos + hpos + ' color: rgba(255, 0, 0, ' + ink_level + '); ' + red_height_style + '">' + c + '</div>');
+				} 
+				if (black_height > 0) {
+					// Output the (possibly partial) character in black
+					$(where).append('<div style="position: absolute; ' + vpos + hpos + ' color: rgba(' + base_colour + ', ' + ink_level + '); ' + black_height_style + '">' + c + '</div>');
+					
+					// Maybe output further subcropped character(s) in black to make the colouring more uneven
+					for (var subclips = 0; subclips < 3; subclips++) {
+						var subclip_right = Math.floor(Math.random() * xpx) + 1;
+						var subclip_left = Math.floor(Math.random() * subclip_right);
+						var subclip_bottom = Math.floor(Math.random() * black_height) + 1;
+						var subclip_top = Math.floor(Math.random() * subclip_bottom);
+						var r = Math.random();
+						var sign = Math.random() < 0.5 ? -1 : 1;
+						var b = brokenness / (max_brokenness + 1); // max_brokenness is 99, but let's use a percentage
+						var i = ink_remaining / max_ink_level;
+						// Thanks to John Valentine for help with the following formula
+						var subclip_opacity = i * (0.5 + 0.5 * Math.sqrt(r * b) * sign); 
+						var subclip_color = 'color: rgba(' + base_colour + ', ' + subclip_opacity + '); ';
+						var subclip_clip = 'clip: rect(' + subclip_top + 'px, ' + subclip_right + 'px, ' + subclip_bottom + 'px, ' + subclip_left + 'px); ';
+						// console.log("sign: " + sign + " r: " + r + " b:" + b + " i: " + i + " result: " + subclip_opacity);
+						$(where).append('<div style="position: absolute; ' + vpos + hpos + subclip_color + subclip_clip + '">' + c + '</div>');
+					}
+				}
+			}
+
 
 			function keydown_nonmod(e) {
 				// Because the keypress event does not make keyCode available for normal chars, we have to store it in the keydown handler
@@ -604,7 +673,7 @@
 			}
 			
 			function move_page() {
-				$('.output').animate({
+				$('#Carriage').animate({
 					top: (vmid - y) + 'px',
 					left: (hmid - x) + 'px',
 				}, 20);
@@ -786,8 +855,10 @@
 			</div>
 		</div><!-- /topbar -->
 		
-		<div class="info-btn">
+		<div class="btn">
 			<button onclick="stop()">Show instructions/info page</button>
+			<button id="TippexStart" onclick="tippex_start()">Load correction paper</button>
+			<button id="TippexStop" onclick="tippex_stop()" style="display: none">Remove correction paper</button>
 		</div>
 		<div class="info">
 			<noscript>
@@ -832,8 +903,8 @@
 				Improvements I'd like to make
 			</h2>
 			<ul>
+				<li>The correction paper needs some tweaks to make it more realistic - eg if you reuse a bit that you've already used, it should be less effective in the shape of the previous character typed there. In general it should probably be more "all or nothing" - patchy at low ink levels rather than faded. This is just a first draft of the feature.</li>
 				<li>If you type too fast or try to type two keys at once, the mechanism should sometimes jam, rather than just ignoring the latter keypress. Amazingly, this is the most commonly requested feature from the beta testers of this program. The only reason I haven't implemented it is the problem of designing a UI to represent unjamming it by picking the mechanism apart, and how to make your fingers inky and oily when you do it.</li>
-				<li>Provide virtual Tipp-Ex (aka White-Out / Snopake / Liquid Paper: correction fluid or paper).</li>
 				<li>Choice of paper backgrounds (but of course you are free to choose the paper you feed into your printer anyway!).</li>
 				<li>Further suggestions welcome (please read the FAQ below first, and remember this is just for fun!) to <a href="mailto:ben@uniqcode.com">ben@uniqcode.com</a>.</li>
 			</ul>
@@ -892,6 +963,12 @@
 				Changelog
 			</h2>
 			<div class="changelog">
+				<h3>
+					version 1.31 (2015-08-09)
+				</h3>
+				<ul>
+					<li>Virtual Correction Paper is here at last! This is just a first draft of it; it needs tweaking to be more realistic.</li>
+				</ul>
 				<h3>
 					version 1.30 (2015-08-05)
 				</h3>
@@ -1139,7 +1216,11 @@
 				</h3>
 			</div><!-- /changelog -->			
 		</div>
-		<div class="output">
+		<div id="Carriage">
+			<div class="output">
+			</div>
+			<div class="tippex">
+			</div>
 		</div>
 		<div class="cursor">
 		</div>
