@@ -1,0 +1,37 @@
+Articles and mentions of OverType.
+2014-02-18: http://movingpackets.net/2014/02/18/bens-super-realistic-typewriter-simulator (formerly LameJournal) (positive)
+2015-08-02: https://news.ycombinator.com/item?id=9990375 (Reddit-style discussion - mostly positive)
+2015-08-02: http://www.metafilter.com/151749/The-quikk-bronw-foxjumps-over-teh-laz-ydog (discussion - mostly positive)
+2015-08-02: https://thetrendythings.com/read/35404 (aggregator link)
+2015-08-02: http://althouse.blogspot.com.ar/2015/08/relive-old-time-frustration-of-typing.html
+2015-08-02: https://twitter.com/jackschofield/status/627804904699097092 (positive tweet)
+2015-08-03: http://thenextweb.com/shareables/2015/08/03/type-it-right-first-time/ (positive article, mixed comments)
+2015-08-03: https://www.reddit.com/r/writing/comments/3fitbu/overtype_maximize_the_writing_experience/ (positive comments, and a suggestion for a full-screen mode)
+2015-08-03: https://www.designernews.co/stories/53558-typewriter-simulator (a couple of comments, positive)
+2015-08-03: http://lenewbie.com/2015/08/03/overtype-simulateur-de-machine-a-ecrire-en-ligne/ (French article, positive)
+2015-08-03: http://m.rue89.nouvelobs.com/node/260572 (French article, positive)
+2015-08-03: http://www.megaphone-forum.com/t2123-la-machine-a-ecrire-viens-tester (French article and comments, positive)
+2015-08-04: http://culturedvultures.com/typewriter-simulator-shows-just-hard-used/ (neutral article)
+2015-08-04: http://www.fastcodesign.com/3049342/typewriters-suck-this-web-app-proves-it (positive article)
+2015-08-04: http://www.techtudo.com.br/noticias/noticia/2015/08/overtype-site-simula-maquina-de-escrever-old-school-veja-como-usar.html (mildly positive review in Portuguese - 105 referrers upto 11th)
+2015-08-04: http://www.nrc.nl/nieuws/2015/08/04/oh-ja-zo-ergerniswekkend-was-het-om-te-typen-op-een-typemachine/ (Dutch article, neutral, ~500 referrals)
+2015-08-04: http://www.bookcrossing.com/forum/15/521909 (Dutch comment thread)
+2015-08-05: http://unwire.hk/2015/08/05/overtype-typemachine-simulator/fun-tech/ (Hong Kong article in Chinese, positive, 500+ referrals)
+2015-08-05: http://www.swagger.mx/tecnologia/overtype-maquina-de-escribir-en-linea (Mexican article in Spanish)
+2015-08-05: http://freshgadgets.nl/deze-leuke-site-bewijst-hoe-moeilijk-het-typen-met-een-typemachine-was (small Dutch article)
+2015-08-06: http://creativepro.com/app-recalls-using-typewriter-really-like/ (long-ish positive article)
+2015-08-08: http://www.engadget.com/2015/08/08/typewriters-suck-this-web-app-proves-it/ (syndicated copy of FastCompany's article - appears in several other places too. Mixed commnts.)
+2015-08-09: https://www.reddit.com/r/InternetIsBeautiful/comments/3gaiel/overtype_the_overthetop_typewriter_simulator/ (all positive so far - 32 upvotes in 21 hours)
+2015-08-09: http://ukedchat.com/2015/08/04/resource-overtype-typewriter/ (positive article, typed entirely in OverType, recommending use in education)
+[unknown date]: http://oztypewriter.blogspot.co.uk/2015/08/typewriter-update.html (just a link and "it's a lot of fun")
+2015-08-09: http://thefretboard.co.uk/discussion/48092/online-typewriter-simulator ("quite fun")
+2015-08-09: http://surething.pl/overtype-irytujacy-symulator-maszyny-do-pisania/ (Polish article, positive)
+[unknown date]: http://blog.brasilacademico.com/2015/08/simulador-de-maquina-de-escrever.html (Brazilian Portuguese, positive)
+2015-08-12: http://www.theregister.co.uk/2015/08/12/typewriters_were_awful_unless_youre_an_economist/ (part of a larger article about economics and how much better things are today)
+
+
+
+Suggestions worth considering:
+* Full-screen mode (ie no topbar)
+* Ability to import text - this is a good candidate for a paid feature I think
+
