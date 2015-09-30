@@ -32,7 +32,7 @@ Articles and mentions of OverType.
 2015-08-20: https://www.linkedin.com/pulse/take-backspace-challenge-randy-green (mentioned as part of generic article)
 2015-08-22: https://dieschreibmaschinisten.wordpress.com/2015/08/22/online-schreibmaschinensimulator-overtype/ (German article, mostly positive)
 2015-09-10: http://www.b9.com.br/60514/tech/o-simulador-de-maquina-de-escrever-mais-realista-que-voce-ja-usou/ (Brazilian Portuguese, positive)
-
+2015-09-22: http://korben.info/apprenez-a-taper-sur-une-machine-a-ecrire.html (French, positive)
 Suggestions worth considering:
 * Ability to import text - this is a good candidate for a paid feature I think
 
