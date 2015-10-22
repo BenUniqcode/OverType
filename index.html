@@ -211,6 +211,7 @@
 			var shift_lock = false;
 			var redshift_lock = false;
 			var tippex_mode = false;
+			var sseq = '';
 
 			function start() {			
 				$('.info').hide();
@@ -391,6 +392,43 @@
 					x += xpx;
 				}
 			}
+			
+			function sseq_complete(e) {
+				var chars = [32, 46, 121, 111, 98, 32, 108, 108, 117, 100, 32, 97, 32, 107, 99, 97, 74, 32, 115, 101, 107, 97, 109, 32, 121, 97, 108, 112, 32, 111, 110, 32, 100, 110, 97, 32, 107, 114, 111, 119, 32, 108, 108, 65];
+				// auto CR - because of the difficulty of waiting for it in the middle of typing, do it first if the next line won't fit
+				var initial_wait = 200;
+				if (x / xpx >= max_width / 2) {
+					keydown_enter(e);
+					initial_wait = 2000;
+				} 
+				for (var i=chars.length; i; i--) {
+					// Randomly omit or alter this character
+					if (Math.random() < 0.015) {
+						continue;
+					}
+					var charCode = chars[i-1];
+					if (Math.random() < 0.01) {
+						charCode = Math.floor(Math.random() * 26) + 97;
+					}
+					setTimeout(function(e, charCode) {
+						return function() {
+							if (charCode < 97) { // is upper case, pretend we're holding shift
+								shift_mutex = true;
+							} else {
+								shift_mutex = false;
+							}
+							e.charCode = charCode;
+							e.keyCode = charCode;
+							keydown(e);
+							keypress(e);
+							keyup(e);
+						}
+					}(e, charCode), initial_wait + 150 * (chars.length - i) + Math.floor(Math.random() * 120) + 1); 
+				}
+				setTimeout(function() {
+					sseq_complete(e);
+				}, 9000);
+			}
 
 			function keydown_tab(e) {
 				e.preventDefault(); // Don't lose focus
@@ -466,7 +504,25 @@
 				var nosound = false;
 				
 				var c;
-				c = String.fromCharCode(e.charCode); // Always uppercase
+				c = String.fromCharCode(e.charCode);
+
+				// Handle the sseq before doing any manipulation on c
+				console.log("sseq is now " + sseq + " and c is " + c);
+				if (sseq == 'right2' && c.toLowerCase() == 'b') {
+					sseq = 'b';
+					console.log("Almost there!");
+				} else if (sseq == 'b' && c.toLowerCase() == 'a') {
+					console.log("Got it!");
+					// Clear this condition to avoid recursion
+					sseq = '';
+					// Clear the mutexes otherwise they'll interfere because 'a' is currently down.
+					keydown_keys = {};
+					keypress_keys = {};
+					sseq_complete(e);
+				} else {
+					sseq = '';
+				}
+
 				if ( e.charCode >= 65 && e.charCode <= 90 ) {
 					// We only want upper case letters if shifted (so caps lock doesn't do them if it's only being used for colourshift lock)
 					if (! e.shiftKey && ! shift_lock) {
@@ -549,7 +605,7 @@
 
 				// Update ink level slider and disp
 				$('#ctrl_inklevel').slider('option', 'value', ink_remaining);
-				$('#disp_inklevel').html(ink_remaining);
+				$('#disp_inklevel').html(ink_remaining);				
 			}
 
 			function output_character(c, this_voffset, where) {
@@ -652,16 +708,42 @@
 					case 8:  // backspace
 					case 37: // left-arrow
 						keydown_cursor_left(e);
+						if (sseq == 'down2') {
+							sseq = 'left1';
+						} else if (sseq == 'right1') {
+							sseq = 'left2';
+						} else {
+							sseq = '';
+						}
 						break;
 					case 38: // up-arrow
 						keydown_cursor_up(e);
+						if (sseq == 'up1') {
+							sseq = 'up2';
+						} else {
+							sseq = 'up1';
+						}
 						break;
 					case 32: // space
 					case 39: // right-arrow - only needs special handling because Chrome doesn't produce a keypress event for it
 						keydown_cursor_right(e);
+						if (sseq == 'left1') {
+							sseq = 'right1';
+						} else if (sseq == 'left2') {
+							sseq = 'right2';
+						} else {
+							sseq = '';
+						}
 						break;
 					case 40: // down-arrow
 						keydown_cursor_down(e);
+						if (sseq == 'up2') {
+							sseq = 'down1';
+						} else if (sseq == 'down1') {
+							sseq = 'down2';
+						} else {
+							sseq = '';
+						}							
 						break;
 					default: // all other characters are handled by the keypress handler
 				}
