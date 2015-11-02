@@ -710,6 +710,12 @@ var overType = function() {
 		}
 		
 		// Buttons
+		$('#Start').click(function() {
+			start();
+		});
+		$('#Stop').click(function() {
+			stop();
+		});
 		$('#TippexStart').click(function() {
 			tippex_start();
 		});
