@@ -162,7 +162,7 @@ var overType = function() {
 			$.ionSound.play('typewriter-carriage-return-main');
 		}
 		var line_length = x / xpx;
-		var return_time = 13 * line_length;
+		var return_time = 9 * line_length;
 		y += ypx;
 		$('#Carriage').animate({
 			top: (vmid - y) + 'px',
