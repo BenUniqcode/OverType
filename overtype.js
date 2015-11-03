@@ -739,7 +739,7 @@ var overType = function() {
 				}
 			}
 			// Remove trailing spaces from this line and add a newline.
-			export_array[exrow].replace(/\s+$/, "");
+			export_array[exrow] = export_array[exrow].replace(/\s+$/, "");
 			export_array[exrow] += "\n";
 		}
 						
