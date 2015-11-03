@@ -4,7 +4,7 @@
 "use strict";
 var overType = function() {
 	const bell_width = 69;
-	const max_width = 79;
+	const maxcol = 79;
 	const tab_width = 8;
 	const xpx = 12, ypx = 28, char_height = 20;
 	const margin_top = 40, margin_left = 30;
@@ -39,7 +39,7 @@ var overType = function() {
 	};
 	var real_shifted = {};
 	var row = 1;
-	var col = Math.floor(max_width / 2);
+	var col = Math.floor(maxcol / 2);
 	var vmid = $(window).height() / 2;
 	var hmid = $(window).width() / 2;
 	var maxrow = 0;
@@ -245,7 +245,7 @@ var overType = function() {
 
 	// shared between keydown_cursor_right() and keypress()
 	var advance_one_space = function() {
-		if (col < max_width) {
+		if (col < maxcol) {
 			col++;
 		}
 	};
@@ -254,7 +254,7 @@ var overType = function() {
 		var chars = [32, 46, 121, 111, 98, 32, 108, 108, 117, 100, 32, 97, 32, 107, 99, 97, 74, 32, 115, 101, 107, 97, 109, 32, 121, 97, 108, 112, 32, 111, 110, 32, 100, 110, 97, 32, 107, 114, 111, 119, 32, 108, 108, 65];
 		// auto CR - because of the difficulty of waiting for it in the middle of typing, do it first if the next line won't fit
 		var initial_wait = 200;
-		if (col >= max_width / 2) {
+		if (col >= maxcol / 2) {
 			keydown_enter(e);
 			initial_wait = 2000;
 		} 
@@ -303,8 +303,8 @@ var overType = function() {
 			var next_tab_stop = tab_width - (col % tab_width);
 			if (next_tab_stop == 0) {
 				next_tab_stop = tab_width;
-			} else if (col + next_tab_stop >= max_width) {
-				next_tab_stop = max_width - col;
+			} else if (col + next_tab_stop > maxcol) {
+				next_tab_stop = maxcol - col;
 			}
 			col += next_tab_stop;
 		}
@@ -725,7 +725,7 @@ var overType = function() {
 		for (var exrow = 0; exrow <= maxrow; exrow++) {
 			export_array[exrow] = "";
 			if (plaintext[exrow]) {
-				for (var excol = 0; excol < max_width; excol++) {
+				for (var excol = 0; excol <= maxcol; excol++) { // cols go from 0 to maxcol inclusive
 					if (plaintext[exrow][excol]) {
 						export_array[exrow] += plaintext[exrow][excol];
 					} else {
