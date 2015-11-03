@@ -1,646 +1,550 @@
 <!DOCTYPE html>
 <html>
+<!-- OverType: The Over-The-Top Typewriter Simulator, by Ben Wheeler -->
+<!-- Copyright (C) 2014-2015 Ben Wheeler. All rights reserved. Absolutely no warranty, express or implied. -->
 	<head>
 		<meta charset="utf-8"> 
-		<title>Ben's Super-Realistic Typewriter Simulator</title>
-		<style type="text/css" media="all">
-			body {
-				font-family: Helvetica, sans-serif;
-				font-size: 10pt;
-				background-color: #eee;
-				margin: 0;
-			}
-			h1 {
-				margin: 0;
-				font-family: Courier, "Courier New", monospace;
-				font-weight: normal;
-				font-size: 32px;
-			}
-			h2 {
-				font-size: 12pt;
-			}
-			h3 {
-				font-size: 11pt;
-			}
-			#input {
-				position: absolute;
-				left: -1000px;
-				top: -1000px;
-			}
-			.topbar {
-				position: absolute;
-				top: 0;
-				left: 0;
-				background-color: #aaa;
-				z-index: 5;
-				padding: 1ex 2% 0 1%;
-				height: 10ex;
-				width: 97%;
-			}
-			.info {
-				position: absolute;
-				top: 6em;
-				padding: 1em;
-				width: 70%;
-				margin-left: auto;
-				margin-right: auto;
-			}
-			.instruct {
-				font-size: 20pt;
-				color: #666;
-			}
-			.output {
-				font-family: Courier, "Courier New", monospace;
-				font-size: 20px;
-				line-height: 30px;
-				position: absolute;
-				left: 5em;
-				top: 3em;
-				margin-bottom: 2em;
-				width: 48em;
-				height: 120ex;
-				background-color: white;
-				border: 1px solid black;
-				padding: 8ex 2em;
-				box-shadow: 8px 8px 4px #888;
-				white-space: nowrap;
-				z-index: 2;
-				display: none;
-			}
-			.cursor {
-				position: absolute;
-				z-index: 3;
-				width: 12px;
-				height: 20px;
-				border-bottom: 2px solid red;
-				display: none;
-			}
-			.title {
-				float: left;
-			}
-			.controls {
-				margin: 0 1em;
-				float: right;
-			}
-			.control {
-				float: left;
-				width: 140px;
-				margin: 0 1ex;
-			}
-			.control p {
-				margin: 0 0 8px 0;
-				text-align: center;
-			}
-		</style>
-		<style type="text/css" media="print">
-			.cursor, .title, .instruct, #input { display: none }
-			.output { left: 0 !important; top: 0 !important; box-shadow: none; border: none; padding: 10ex 0 0 0; }			
-		</style>
-		<!-- jQuery -->
-		<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-		<script type="text/javascript">window.jQuery || document.write( '<script type="text/javascript" src="assets/ion_sound_1.3.0/js/vendor/jquery-1.10.2.min.js"><\/script>' )</script>
-		<!-- jQuery-UI -->
-		<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css" />
-		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>		
-		<!-- ION.Sound -->
-		<script type="text/javascript" src="assets/ion_sound_1.3.0/js/ion-sound/ion.sound.min.js"></script>
+		<title>OverType - The Over-The-Top Typewriter Simulator</title>
+		<!-- jQuery-UI CSS (for the sliders, and the accordion on the info page) -->
+		<!-- (The JS is loaded by fallback.js, but that doesn't provide fallbacks for CSS, so this is always loaded locally) -->
+		<link rel="stylesheet" href="assets/jquery-ui-1.11.4/jquery-ui.min.css">
+		<!-- Special Elite font -->
+		<link href="css/font-specialelite.css" rel="stylesheet" type="text/css">
+		<!-- GNUTypewriter font -->
+		<link href="css/font-gnutypewriter.css" rel="stylesheet" type="text/css">
+		<!-- OverType CSS -->
+		<link href="css/overtype.css" rel="stylesheet" media="all">
+		<link href="css/overtype-print.css" rel="stylesheet" media="print">
 		
+		<!-- Load Fallback.js and use that to load other scripts -->
+		<script src="assets/fallback/fallback.min.js"></script>
 		<script type="text/javascript">
-			const bell_width = 69;
-			const max_width = 80;
-			const tab_width = 8;
-			const unshifted = {
-			   59: ';',
-				 61: '=',
-				173: '-',
-				188: ',',
-				190: '.',
-				191: '/',
-				192: '`',
-				219: '[',
-				220: '\\',
-				221: ']',
-				222: '\'',
-			};
-			const shifted = {
-				48: ')',
-				49: '!',
-				50: '@',
-				51: '£',
-				52: '$',
-				53: '%',
-				54: '^',
-				55: '&',
-				56: '*',
-				57: '(',
-				59: ':',
-				61: '+',
-				173: '_',
-				188: '<',
-				190: '>',
-				191: '?',
-				192: '~',
-				219: '{',
-				220: '|',
-				221: '}',
-				222: '"',
-			};
-			const xpx = 12, ypx = 30;
-			const margin_top = 40, margin_left = 30;
-			var x = max_width * xpx / 2;
-			var y = 0;
-			var backspaces = 0;
-			var vmid = $(window).height() / 2;
-			var hmid = $(window).width() / 2;
-			var voffset = {};
-			var broken = {};
-			var keydown_mutex = false;
-			var shift_mutex = false;
-			var brokenness = 20;
-			var ink_remaining = 400;
-			var ink_variation = 0.3;
-			var started = false;
-			var redshift = false;
-
-			function start() {			
-				$('.info').hide();
-				$('.output, .cursor, .controls').show();
-				started = true;
-			}
-			
-			function handle_keypress(e) {	
-				if (! started) {
-					start();
+			fallback.load({
+				// jQuery
+				'jQuery': [
+					'//ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js',
+					'assets/jquery/jquery-2.1.4.min.js'
+        ],
+        // jQueryUI (for the sliders, and the accordion on the info page)
+        'jQuery.ui': [
+        	'//ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js',
+        	'assets/jquery-ui-1.11.4/jquery-ui.min.js'
+        ],
+        // IonSound
+        'ion.sound': [
+        	'assets/ion.sound-3.0.6/js/ion.sound.js'
+        ],
+        // FileSaver.js
+        'saveAs': [
+        	'assets/FileSaver.js/FileSaver.min.js'
+        ],
+        // OverType
+        'overType': [
+        	'overtype.js'
+        ]
+      }, {
+      	// Ensure jQuery loads before jQueryUI
+      	'shim': {
+					'jQuery.ui': ['jQuery'],
+					'ion.sound': ['jQuery'],
+					'overType': ['jQuery', 'jQuery.ui', 'ion.sound', 'saveAs']
 				}
-				key = e.which;
-				nosound = false;
-
-				if (key == 16) { // shift
-					if (shift_mutex) {
-						return false;
-					}
-					$.ionSound.play('typewriter-spacebar');
-					shift_mutex = true;
-					return false;
-				} 
-				if (key == 18) { // alt = red-shift
-					$.ionSound.play('typewriter-spacebar');
-					redshift = true;
-					return false;
-				}				
-				if (keydown_mutex) {
-					return false;
-				}
-				keydown_mutex = true;
-				if (key == 13) { // enter
-					e.preventDefault();
-					$.ionSound.play('typewriter-carriage-return');
-					$('.output').append('<br/>');
-					line_length = x / xpx;
-					x = 0;
-					backspaces = 0;
-					y += ypx;
-					return_time = 13 * line_length;
-					$('.output').animate({
-						top: (vmid - y) + 'px',
-					}, 100).animate({
-						left: (hmid - x) + 'px',
-					}, return_time, function() {
-						// Stop playing the sound when the animation completes
-						$.ionSound.stop('typewriter-carriage-return');
-					}); 
-					return false;
-				}
-				if (key == 38) { // up-arrow
-					if (y > 0) {
-						y -= (ypx / 4);
-						$.ionSound.play('typewriter-spacebar');
-						move_page();
-					}
-					return false;
-				}
-				if (key == 40) { // down-arrow
-					$.ionSound.play('typewriter-spacebar');
-					y += (ypx / 4);
-					move_page();
-					return false;
-				}
-				if (key == 8 || key == 37) { // backspace, left-arrow
-					if (x > 0) {
-						x -= xpx;
-						backspaces++;
-						$.ionSound.play('typewriter-spacebar');
-					} 
-					return false;
-				} 
-				oldx = x;
-				if (key == 9) { // tab
-					e.preventDefault(); // Don't lose focus
-					if (e.shiftKey) {
-						var prev_tab_stop = ((x / xpx) % tab_width);
-						if (prev_tab_stop == 0) {
-							prev_tab_stop = tab_width;
-						} 
-						if ((x / xpx) - prev_tab_stop < 0) {
-							prev_tab_stop = x;
-						}
-						x -= (prev_tab_stop * xpx); 
-						backspaces += prev_tab_stop;
-					} else {
-						var next_tab_stop = tab_width - ((x / xpx) % tab_width);
-						if (next_tab_stop == 0) {
-							next_tab_stop = tab_width;
-						} else if ((x / xpx) + next_tab_stop > max_width) {
-							next_tab_stop = max_width - (x / xpx);
-						}
-						x += (next_tab_stop * xpx);
-					}
-					if ((oldx / xpx) < bell_width && (x / xpx) >= bell_width) {
-						$.ionSound.play('typewriter-bell-2');
-					}	else {				
-						$.ionSound.play('typewriter-spacebar');
-					}
-					move_page();
-					return false;
-				}
-
-				var c = String.fromCharCode(key);
-				if (e.shiftKey) {
-					if (c.match(/[A-Za-z]/)) {
-						c = c.toUpperCase();
-						ink_remaining--;
-					} else if (shifted[key]) {
-						c = shifted[key];
-						ink_remaining--;
-					} else {
-						c = '&nbsp;';
-					}
-				} else if (c.match(/[A-Za-z0-9]/)) {
-					c = c.toLowerCase();
-					ink_remaining--;
-				} else if (unshifted[key]) {
-					c = unshifted[key];
-					ink_remaining--;
-				} else {
-					c = '&nbsp;';
-				}
-				
-				// Choose a greyscale colour with a random element to simulate uneven key pressure and ribbon ink
-				var ink_level = (ink_remaining > 0) ? ink_remaining / 400 - ink_variation + Math.random() * ink_variation : 0;
-								
-				// Vertical offset
-				if (! (c in voffset)) {
-					voffset[c] = Math.round((Math.random() * 1.5) - 0.75);
-				}
-				
-				extra_offset = 0;
-				// Extra offset if highly broken
-				if (brokenness > 50) {
-					extra_offset = Math.random() * brokenness / 25 - 1;
-					if (voffset[c] < 0) {
-						extra_offset = -extra_offset;
-					}
-				}
-				
-				// If brokenness >75%, let some keys be permanently broken.
-				// The chance of a key being broken increases with brokenness; once broken, it remains so until brokenness is reduced
-				// below 75% whereupon they are all fixed.
-				if (brokenness > 75) {
-					// Randomly break keys with a likelihood and a maximum number of broken keys that depend on the brokenness level
-					if (c != '&nbsp;' && (broken[c] || (Math.random() * brokenness > 75 && Math.random() < 0.5 && Object.keys(broken).length < (brokenness - 75) / 5))) { 
-						if (Math.random() > 0.7) {
-							broken[c] = '&#9608;'; // full block - as if the embossed character has fallen off the arm.
-						} else {
-							broken[c] = '&nbsp;'; // as if the key doesn't work at all
-							nosound = true;
-						}
-					}
-				} else {
-					broken = {};
-				}
-
-				// Output the character, unless it's broken
-				if (broken[c]) {
-					$('.output').append('<div style="position: absolute; top: ' + (y + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + ');">' + broken[c] + '</div>');
-				} else {
-					// If any part of the char is to be in red, print the whole char in red first, then overprint part of it in black
-					var black_height_style = '';
-					if (redshift) {
-						$('.output').append('<div style="position: absolute; top: ' + (y + voffset[c] + extra_offset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(255, 0, 0, ' + ink_level + '); overflow: hidden; z-index: 99">' + c + '</div>');
-						black_height = 0;
-						if (Math.random() < brokenness / 100) {
-							black_height = Math.round(Math.random() * ypx * brokenness / 100);
-						} else {
-							black_height = 0;
-						}
-						black_height_style = 'height: ' + black_height + 'px; '
-					} else {
-						black_height_style = '';
-					}
-					$('.output').append('<div style="position: absolute; top: ' + (y + voffset[c] + extra_offset + margin_top) + 'px; left: ' + (x + margin_left) + 'px; color: rgba(0, 0, 0, ' + ink_level + '); ' + black_height_style + 'overflow: hidden; z-index: 100">' + c + '</div>');
-				}
-				
-				if ((x / xpx) < max_width) {
-					x += xpx;
-				} else {
-					backspaces++; // Fudge hard right margin without position:absolute
-				}
-				
-				if ((oldx / xpx) < bell_width && (x / xpx) >= bell_width) {
-					$.ionSound.play('typewriter-bell-2');
-				} else if (key == 32 || key == 39) { // space, right-arrow
-					$.ionSound.play('typewriter-spacebar');
-				} else if (! nosound) {
-					$.ionSound.play('typewriter-keydown');
-				} 
-
-				// Update ink level slider
-				$('#ctrl_inklevel').slider('option', 'value', ink_remaining);
-
-				return false;
-			}
-			
-			function move_page() {
-				$('.output').animate({
-					top: (vmid - y) + 'px',
-					left: (hmid - x) + 'px',
-				}, 20);
-			}
-
-			$(function() {
-				// Sliders
-				$('#ctrl_brokenness').slider({
-					min: 0,
-					max: 100,
-					value: brokenness,
-					change: function() {
-						brokenness = $(this).slider('option', 'value');
-						ink_variation = 1.0 * brokenness / 100;
-					},
-				});
-				$('#ctrl_inklevel').slider({
-					min: 0,
-					max: 1600,
-					value: ink_remaining,
-					change: function() {
-						ink_remaining = $(this).slider('option', 'value');
-					},
-				});
-				
-				move_page();
-				$('.cursor').css('top', vmid + 46).css('left', hmid + 32); // Magic numbers basically arrived at by trial and error...
-				$.ionSound({
-					path: "assets/typewriter_sounds/",
-    			sounds: [
-        		"typewriter-keydown",
-        		"typewriter-keyup",
-        		"typewriter-carriage-return",
-        		"typewriter-spacebar",
-        		"typewriter-bell-2",
-    			],
-    			multiPlay: true,
-				});
-				$('#input').val('').trigger('focus')
-				.on('blur', function(e) { 
-				  // A small delay seems to be necessary before forcing the focus back
-				  e.preventDefault();
-					setTimeout(function() {
-						$('#input').trigger('focus'); 
-					}, 20); 
-				})
-				.on('keydown', function(e) { // I originally used keypress, but this ignores backspace on Chrome
-					handle_keypress(e); 
-				})
-				.on('keyup', function(e) {
-					if (keydown_mutex && e.which != 16) {
-						// Play the key release sound after a short delay
-						setTimeout(function() {
-							$.ionSound.play('typewriter-keyup');
-						}, 65);
-						move_page();
-						// Wait till all animations have finished before releasing the mutex
-						$(":animated").promise().done(function() {
-							keydown_mutex = false;
-						});
-					} else if (shift_mutex && e.which == 16 && ! e.shiftKey) {
-						$.ionSound.play('typewriter-keyup');
-						shift_mutex = false;
-					}	else if (redshift && e.which == 18) {
-						$.ionSound.play('typewriter-keyup');
-						redshift = false;
-					}					
-				}); // on()
-			}); //$()
-		</script>
+			});
+		</script>		
 	</head>
 	<body>
-		<textarea id="input">
-		</textarea>
-		<div class="topbar">
-			<div class="title">
-				<h1 style="margin-bottom: 0">Ben's Super-Realistic* Typewriter Simulator</h1>
-				<p style="margin-top: 0"><small>* Neither realism nor superness guaranteed</small></p>
-			</div>
-			<div class="controls">
-				<div class="control">
-					<p>
-						Brokenness
-					</p>
-					<div class="slider" id="ctrl_brokenness">
+		<div class="bars">
+			<div class="topbar">
+				<div class="title">
+					<h1>
+						<img src="images/overtype_logo.png" alt="OverType">
+						<img id="ProLogo" src="images/overtype_pro_logo.png" alt="Pro" style="display: none">
+					</h1>
+					<h2 style="margin-bottom: 0"><img src="images/overtype_subhead.png" alt="The Over-The-Top Typewriter Simulator" height="27"></h2>
+				</div>
+				<div class="controls">
+					<div class="control">
+						<h4 style="text-align: right; margin: 0 0 0 20px">Font:</h4>
+					</div>
+					<div class="control">
+						<div>
+							<label>
+								<input class="fontsel" type="radio" name="font" value="Courier, 'Courier New', monospace" checked>
+								<span style="font-family: Courier, monospace">Courier</span>
+							</label>
+							<br>
+							<label>
+								<input class="fontsel" type="radio" name="font" value="'Special Elite', monospace">
+								<span style="font-family: 'Special Elite', monospace">Special&nbsp;Elite</span>
+							</label>
+							<br>
+							<label>
+								<input class="fontsel" type="radio" name="font" value="'GNUTypewriterStandard', monospace">
+								<span style="font-family: 'GNUTypewriterStandard', monospace">GNUTypewriter</span>
+							</label>
+						</div>
+					</div>
+					<div class="control">
+						<h4>
+							Brokenness
+						</h4>
+						<div class="slider" id="ctrl_brokenness">
+						</div>
+						<div class="disp" id="disp_brokenness">
+						</div>
+					</div>
+					<div class="control">
+						<h4>
+							Ribbon Ink
+						</h4>
+						<div class="slider" id="ctrl_inklevel">
+						</div>
+						<div class="disp" id="disp_inklevel">
+						</div>
 					</div>
 				</div>
-				<div class="control">
-					<p>
-						Ribbon inkiness
-					</p>
-					<div class="slider" id="ctrl_inklevel">
-					</div>
+				<div style="clear:both"><!-- Ensures topbar height is set to height of contents -->
 				</div>
-			</div>
-		</div><!-- /topbar -->
-		
+			</div><!-- .topbar -->
+			<div class="buttonbar">
+				<div class="buttons left">
+					<button id="Stop">Show instructions/info page</button>
+					<button id="TippexStart">Load correction paper</button>
+					<button id="TippexStop"" style="display: none">Remove correction paper</button>
+				</div>
+				<div class="buttons right">
+					<button id="TopbarHide"">Hide Controls</button>
+					<button id="TopbarShow" style="display: none">Show Controls</button>
+					<button id="Export" style="display: none">Export</button>
+				</div>
+			</div><!-- .buttonbar -->
+		</div><!-- .bars -->
 		<div class="info">
-			<h2>
-				Why?
-			</h2>
-			<p>
-				All the existing typewriter simulators that I've found on the web get one very basic thing wrong - when you press backspace, they erase the character you just typed, like a computer. On a real typewriter, backspace
-				simply moves the carriage back one space, allowing you to overtype a previously typed character; so I have implemented
-				it this way. If you want to erase a character, you need Tipp-Ex. (NB I do not advise using Tipp-Ex on your monitor). 
-			</p>
-			<h2>
-				Yeah, but... WHY?
-			</h2>
-			<p>
-				Because it's a fun thing to play with and also an interesting little development project - there's more of a challenge to the implementation than you might expect... 
-			</p>
+			<img src="images/overtype_intro.png" style="width: 100%" alt="Welcome to OverType, the Over-The-Top Typewriter Simulator! This is, to my knowledge, the first typewriter sim on the web that faithfully re-creates the manual typewriter experience, eschewing all modern computer conveniences like easy deletion and editing, and providing authentic features such as overtyping, wobbly and unevenly-inked characters, and only being allowed to press one key at a time.">
 			<noscript>
 				<p style="font-size: 36px">
 					<b>You need to <a href="http://enable-javascript.com">enable Javascript in your browser</a> for this to work.</b>
 				</p>
 			</noscript>
-			<h2>
-				Instructions
-			</h2>
-			<div class="instruct">
-				<ul>
-					<li>Make sure you have your sound turned on for the fully-immersive experience!</li>
-					<li>If it stops working or to see this text again, just reload the page.</li>
-					<li>Ready? Just start typing, or click here if you prefer: <button style="font-size: large" onclick="start()">START!</button></li>
-				</ul>
-			</div>
-			<h2>
-				Sliders
-			</h2>
-			<p>
-				Try out the sliders at the top of the screen. The ribbon ink reduces linearly, which is not how a real typewriter would work but gives a more pleasing result. The "brokenness" controls how uneven the vertical alignment and ink density are, and higher settings cause keys to start breaking (once a particular key has broken, it will never work again until you reduce the brokenness back down).
-			</p>
-			<h2>
-				Known bugs
-			</h2>
-			<ul>
-				<li>On Safari, the sounds are not synchronised. This is a Safari issue, and there doesn't seem to be anything I can do about it. Use Firefox or Chrome instead.</li>
-			</ul>
-			<h2>
-				Improvements I'd like to make
-			</h2>
-			<ul>
-				<li>If you type too fast or try to type two keys at once, the mechanism should jam. Amazingly, this is the most commonly requested feature from the early testers of this program. The only reason I haven't implemented it is the problem of designing a UI to represent unjamming it by picking the mechanism apart.</li>
-				<li>Provide virtual Tipp-Ex.</li>
-				<li>Further suggestions welcome (though remember this is just for fun!) to <a href="mailto:ben@uniqcode.com">ben@uniqcode.com</a></li>
-			</ul>
-			<h2>
-				Credits
-			</h2>
-			<p>
-				For Archie. Developed by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
-				<a href="https://github.com/IonDen/ion.sound">IonSound</a>. Typewriter sound effects from <a href="http://freesound.org">Freesound</a> and <a href="http://www.soundjay.com">SoundJay</a>, some of them edited by me. Tested on Firefox27/Mac and Chrome32/Mac. 			
-			</p>
-			<h2>
-				Changelog
-			</h2>
-			<div class="changelog">
+			<div id="InfoAccordion">
 				<h3>
-					version 1.14 (2014-02-12)
+					Instructions
 				</h3>
-				<ul>
-					<li>2-colour ribbon. Hold [alt] to type red characters. Sometimes these will randomly be only partially red, to simulate failing to press the colour shift key hard enough. The frequency and amount of this failure is affected by the Brokenness control.</li>
-				</ul>
+				<div class="instruct">
+					<ul>
+						<li>You need to be on a computer with a keyboard. Mobile touchscreen devices won't work (see Known Bugs below).</li>
+						<li>Make sure you have your sound turned on for the fully-immersive experience!</li>
+						<li>Just like a real manual typewriter, you can only press one character key at a time. You must release each key before pressing the next. Most people naturally overlap keypresses when typing on a computer keyboard - you may need to change your typing style to avoid skipping characters when typing at speed (see FAQ for more info).</li>
+						<li>As well as just typing normal text, you might like try these:
+							<ul>
+								<li>You can use the cursor keys to move around. The up and down cursors move the roller by a quarter-line.</li>
+								<li>Use [tab] and [shift][tab] to jump forward or back to the nearest tab stop.</li>
+								<li>Hold down [esc] for "colour shift", which gives you red text. Or, sometimes, only partly so...</li>
+								<li>[shift] and/or [esc] can be locked down by holding one or both and pressing [caps lock] (effectively "shift lock"). Press [caps lock] again to unlock.</li>
+								<li>Move the sliders (see "Sliders" below)</li>
+								<li>Use the correction paper to erase your mistakes (see "Correction Paper" below)</li>
+								<li>Make a dollar sign by overtyping a capital <b>S</b> with a <b>|</b> (vertical bar/pipe)</li>
+							</ul>
+						</li>
+						<li>Ready? Just start typing, or click here if you prefer: <button style="font-size: large" id="Start">START!</button></li>
+					</ul>
+				</div>
+			
 				<h3>
-					version 1.13 (2014-02-12)
+					Sliders
 				</h3>
-				<ul>
-					<li>Sliders to control brokenness and inkiness.</li>
-					<li>A high brokenness setting results in more wobbly and unevenly-inked text. Above 75%, the keys start to randomly break as you type, either failing to work at all (broken armature) or occasionally printing a solid block (armature works but letter has fallen off). A broken key never recovers until the brokenness is reduced back below this threshold, which unbreaks all of them.</li>
-					<li>The inkiness slider also monitors your current ink level - ie it reduces as you type.</li>
-					<li>Start from the centre of the top line of the page, instead of the top-left.</li>
-				</ul>
+				<div>
+					<p>
+					Try out the sliders at the top of the screen. The ribbon ink reduces linearly, which is not how a real typewriter would work but gives a more pleasing result. The "brokenness" controls how uneven the vertical alignment, ink density and colour shift are, and higher settings cause keys to start breaking (once a particular key has broken, it will never work again until you reduce the brokenness back down).
+					</p>
+				</div>
+			
 				<h3>
-					version 1.12 (2014-02-12)
+					Correction Paper
 				</h3>
-				<ul>
-					<li>Cursor key support. Left and right are the same as backspace and space. Up and down feed the paper by a quarter of a line height at a time.</li>
-					<li>Use a position:absolute div for each character within position:relative output block. I had hoped this would allow me to do away with the input textarea altogether and bind the key handlers to $(document), but alas even with preventDefault(), some keypresses were still occasionally being passed through to the browser, causing it to scroll (space), go back a page (backspace) etc. Still, this way of positioning seems more flexible so I kept it.</li>
-				</ul>
+				<div>
+					<p>
+						OverType provides virtual correction paper to help correct your inevitable typing errors. To use it, move the cursor to the character you want to erase, click the "Load correction paper" button, and type the same character. Its effectiveness varies depending on brokenness and ink level. This is an initial implementation and improvements are planned - your feedback is welcome.  
+					</p>
+				</div>
+			
 				<h3>
-					version 1.11 (2014-02-12)
+					Known Bugs
 				</h3>
-				<ul>
-					<li>Change alpha level instead of colour to vary ink level. This seems to look more realistic and also means that
-					if you overtype characters they get darker as they should.</li>
-					<li>Reduce the likelihood of characters having vertical offset (while keeping the range the same at +/- 1px).</li> 
-					<li>Play the CR bell for tabs and spaces as well as normal keys.</li>
-					<li>Fix lines sometimes wrapping if you overtype a lot after a lot of backspaces.</li>
-				</ul>
+				<div>
+					<ul>
+						<li>As it stands, this site is unlikely ever to work on a touchscreen device without a real keyboard, due to the problems of dealing with an on-screen keyboard. If I use the device's own on-screen keyboard there are issues with forcing it to appear without a visible input field, keeping it there, working around it etc. I've tried making my own virtual keyboard instead (a bunch of <code>&lt;button&gt;</code>s with handlers attached to touch events) which kinda works but is rather sluggish, and there are issues with the sounds. I think for mobile use it will need to be a full-blown app with its own input handler, rather than a web app. I may attempt it at some point, if anyone really wants it.</li>
+						<li>If shift lock is on, and you press a non-alphabetic character key that you have not yet pressed in conjunction with shift, the program has no way of knowing what the shifted character should be for your particular keyboard, so it will default to using the shift characters from my UK Apple keyboard. Once you have pressed a key in conjunction with shift, the program remembers the correct shift character for that key and will use it when shift lock is on.</li>
+					</ul>
+				</div>
+			
 				<h3>
-					version 1.10 (2014-02-11)
+					Planned Improvements
 				</h3>
-				<ul>
-					<li>fix CSS font-family (whoops)</li>
-					<li>per-char vertical offset was not being used consistently</li>
-				</ul>		
+				<div>
+					<ul>
+						<li>The correction paper needs some tweaks to make it more realistic - eg if you reuse a bit that you've already used, it should be less effective in the shape of the previous character typed there. In general it should probably be more "all or nothing" - patchy at low ink levels rather than faded. This is just a first draft of the feature.</li>
+						<li>If you type too fast or try to type two keys at once, the mechanism should sometimes jam, rather than just ignoring the latter keypress. Amazingly, this is the most commonly requested feature from the beta testers of this program. The only reason I haven't implemented it is the problem of designing a UI to represent unjamming it by picking the mechanism apart, and how to make your fingers inky and oily when you do it.</li>
+						<li>Choice of paper backgrounds (but of course you are free to choose the paper you feed into your printer anyway!).</li>
+						<li>Further suggestions welcome (please read the FAQ below first, and remember this is just for fun!) to <a href="mailto:ben@uniqcode.com">ben@uniqcode.com</a>.</li>
+					</ul>
+				</div>
+			
 				<h3>
-					version 1.9 (2014-02-11)
+					FAQ
 				</h3>
-				<ul>
-					<li>Stylesheet for printing</li>
-					<li>Increased space between lines</li>
-				</ul>
+				<div>
+					<h4>Why did you write this?</h4>
+					<p>
+						It started because I was trying to tell my kids about how typewriters worked (because of course they'd never seen one), so I looked for a typewriter simulator on the web, but all the existing ones that I could find get one very basic thing wrong - when you press backspace, they erase the character you just typed, like a computer. On a real typewriter, backspace simply moves the carriage back one space, allowing you to overtype a previously typed character. Erasing requires Tipp-Ex or suchlike.
+					</p>
+					<p>
+						One day my youngest son suggested I should write one that works the right way and allows overtyping. This seemed like it would be an interesting challenge... and indeed it was. The first version took me about an hour. 
+					</p>
+					<p>
+						Since then it's all got a bit out of hand as I strive to make the program's output "worse" by trying to faithfully re-create some of the other interesting eccentricities of typewriters that have been eliminated in the computer age, such as wobbly and unevenly-inked characters. Thanks to all the beta testers for their great suggestions and feedback.
+					</p>
+					<h4>Why are some of my keypresses being ignored? / Why can't I type at my usual speed?</h4>
+					<p>
+						On a manual typewriter, only one (striking) key may be pressed at a time, otherwise at best the second key's hammer gets blocked by the first, and at worst the hammers may get tangled together and require picking apart. OverType replicates this (just the blocking, not the tangling, for now...) by ignoring any keypresses that happen when a character key is already being held down. Because you are used to typing on a computer, you almost certainly overlap your keypresses without even realising it. Be sure to release each key before pressing the next. 
+					</p>
+					<p>
+						Likewise, you cannot type during a carriage return. You have to wait for it to finish.
+					</p>
+					<h4>How do I print what I've typed?</h4>
+					<p>
+						Just use your browser's standard Print function. It will use the print stylesheet, which omits all the on-screen controls, page border and background, and just prints the contents of the page.
+					</p>
+					<h4>How do I save/export?</h4>
+					<p>
+						You can use your operating system's "Print to file" function (on a Mac, the "PDF" button in the bottom-left of the Print dialog). As with printing to an actual printer, this will just render the contents of the page, not the controls or background. Alternatively, if you want the background and your text fits on the screen, take a screenshot.
+					</p>
+					<h4>How can I save as plain text or in Word format for later editing?</h4>
+					<p>
+						You can't, for two reasons. Firstly, it's completely against the spirit of a manual typewriter. Secondly, the whole purpose of this program is to replicate features of a manual typewriter that computer programs such as word processors and text editors cannot replicate, such as overtyped, unevenly inked, and wobbly characters. If you could export as text you would lose all of that. If you want editable text, use a word processor or text editor like a sane person...
+					</p>
+					<h4>Are you watching what I type? / Can I save files on the server?</h4>
+					<p>
+						No. The code runs entirely on your machine; no data is sent back to the server.
+					</p>
+					<h4>I love this so much I want to give you some money / hire you to write code for me!</h4>
+					<p>
+						That's great, thanks! Donations of any size are always welcome to my Paypal account, ben@qolc.net (please don't email me about OverType at this address - use the one above). 
+					</p>
+					<p>
+						I'm a freelance full-stack LAMP developer with 20 years' experience. My specialities include PHP, Perl, jQuery, Linux sysadmin and MySQL; if you have a job offer to discuss, I'd love to hear from you - please email <a href="mailto:info@uniqcode.com">info@uniqcode.com</a>.
+					</p>
+				</div>
+			
 				<h3>
-					version 1.8 (2014-02-11)
+					Credits
 				</h3>
-				<ul>
-					<li>The ribbon ink now gradually runs out, so the text becomes lighter the more characters you type.</li>
-					<li>Reduced vertical offset, as it was just a tad too wibbly-wobbly.</li>
-				</ul>
+				<div>
+					<p>
+						Created by Ben Wheeler @ <a href="http://uniqcode.com">UniqCode</a>, using <a href="http://jquery.com">jQuery</a> and
+						<a href="https://github.com/IonDen/ion.sound">IonSound</a>. Typewriter sound effects from <a href="http://freesound.org">Freesound</a> and <a href="http://www.soundjay.com">SoundJay</a>, some of them edited by me. Dedicated to Archie. 
+					</p>
+				</div>
+			
 				<h3>
-					version 1.7 (2014-02-11)
+					Changelog
 				</h3>
-				<ul>
-					<li>Prevent the hidden textarea from losing focus. It should now be safe to click anywhere on the page.</li>
-					<li>Implemented tab stops every 8 chars - press TAB to jump to the next tab stop, SHIFT-TAB jumps to the previous one.</li>
-				</ul>
-				<h3>
-					version 1.6 (2014-02-11)
-				</h3>
-				<ul>
-					<li>If both shift keys are pressed, don't do the keyup sound until both are released.</li>
-					<li>Round the vertical offset to an integer number of pixels.</li>
-					<li>Don't release the keydown mutex until animations have finished. This limits typing speed and prevents being able to type a character onto the next line while a carriage return is in progress.</li>
-				</ul>
-				<h3>
-					version 1.5 (2014-02-11)
-				</h3>
-				<ul>
-					<li>Use a separate mutex for the shift key.</li>
-					<li>Position the page on load so it doesn't jump after the first keypress.</li>
-				</ul>
-				<h3>
-					version 1.4 (2014-02-11)
-				</h3>
-				<ul>
-					<li>Move paper on keyup, not keydown.</li>
-					<li>Use a mutex to ensure only one keypress is handled at a time, instead of a timeout (also fixes a long-held key generating two characters).</li>
-					<li>Each character now has a consistent vertical offset (randomly chosen at the start), instead of randomly changing each time.</li>
-					<li>Drop shadow on page.</li>
-					<li>Fix page moving too far vertically on CR.</li>
-				</ul>
-				<h3>
-					version 1.3 (2014-02-10)
-				</h3>
-				<ul>
-					<li>The typed character now always appears in the centre of the screen; the "paper" moves.
-		Movement of paper and carriage return are animated.</li>
-					<li>A basic cursor to show where the next character will appear. This could eventually become an animated print head.</li>
-					<li>Wibbly-wobbly text: A small random vertical offset is added to each character (suggested by David Gosnell)</li>
-				</ul>
+				<div class="changelog">
+					<h3>
+						version 2.0 (2015-11-03)
+					</h3>
+					<ul>
+						<li>First release of "Pro" version.</li>
+						<li>Split out CSS and JS from HTML, and reorganise JS into self-contained namespace/module.</li>
+						<li>Pro: Plain text export</li>
+						<li>Pro: Ability to run offline, without an internet connection, and direct from files instead of via a webserver.</li>
+					</ul>
+					<h3>
+						version 1.34 (2015-08-12)
+					</h3>
+					<ul>
+						<li>New font available: GNUTypewriter.</li>
+						<li>Add button to hide/show the topbar controls.</li> 
+					</ul>
+					<h3>
+						version 1.33 (2015-08-09)
+					</h3>
+					<ul>
+						<li>Fix offset page when printing.</li>
+					</ul>
+					<h3>
+						version 1.32 (2015-08-09)
+					</h3>
+					<ul>
+						<li>The correction paper will be automatically unloaded for any vertical movement, not just CR.</li>
+						<li>Add info about how to use the correction paper.</li>
+						<li>Accordionise the info page, and a new introduction written in OverType itself.</li>
+					</ul>
+					<h3>
+						version 1.31 (2015-08-09)
+					</h3>
+					<ul>
+						<li>Virtual Correction Paper is here at last! This is just a first draft of it; it needs tweaking to be more realistic.</li>
+					</ul>
+					<h3>
+						version 1.30 (2015-08-05)
+					</h3>
+					<ul>
+						<li>Always scroll the viewport to the current typing position when typing - useful if you've been scrolling through the instructions.</li>
+						<li>Replace the simplistic keydown and keypress mutexes with records of *which* keys are being held down; this allows us to ignore keyboard auto-repeat, and only advance and allow further typing when all keys have been released.</li>
+						<li>Upgrade Ion.Sound to 3.0.6</li>
+					</ul>
+					<h3>
+						version 1.29 (2015-08-04)
+					</h3>
+					<ul>
+						<li>Fixed crash in Safari when enter was pressed twice in a row.</li>
+						<li>Upgrade Ion.Sound to 3.0.5</li>
+					</ul>
+					<h3>
+						version 1.28 (2015-08-03)
+					</h3>
+					<ul>
+						<li>Don't let the sliders or font selector keep focus. This avoids them reacting to certain keypresses (eg cursor keys). Apologies if this causes accessibility problems for anyone.</li>
+						<li>Rearrange instructions page and add FAQ.</li>
+					</ul>
+					<h3>
+						version 1.27 (2015-05-15)
+					</h3>
+					<ul>
+						<li>Choice of fonts. Improved appearance of header. Fix an issue with redshift. Textured page background on screen.</li> 
+					</ul>
+					<h3>
+						version 1.26 (2015-03-07)
+					</h3>
+					<ul>
+						<li>While a CR is in progress, ignore all other keys. Previously it was possible to prematurely type characters at the beginning of the next line before the CR had completed.</li>
+					</ul>
+					<h3>
+						version 1.25 (2015-03-07)
+					</h3>
+					<ul>
+						<li>Upgraded Ion.Sound to 3.0.0 (and use latest jQuery and jQueryUI while we're at it).</li>
+						<li>The Ion.Sound upgrade fixes the problems with sound synchronisation on Safari, so removed all the warnings about not using it.</li>
+					</ul>
+					<h3>
+						version 1.24 (2014-03-16)
+					</h3>
+					<ul>
+						<li>Fix printing, which got broken in a previous version.</li>
+					</ul>
+					<h3>
+						version 1.23 (2014-03-05)
+					</h3>
+					<ul>
+						<li>Do away with the off-screen textarea altogether; just bind the event handlers to $(document).</li>
+					</ul>
+					<h3>
+						version 1.22 (2014-02-27)
+					</h3>
+					<ul>
+						<li>Don't play the motion part of the CR sound if we are already at the beginning of the line (otherwise it was playing a tiny bit of it, which sounded bad).</li>
+						<li>Animate a little wobble at the stop part of a CR. It just seemed like the sound demanded it.</li>
+					</ul>
+					<h3>
+						version 1.21 (2014-02-26)
+					</h3>
+					<ul>
+						<li>Separated carriage return sound into motion and stop sounds. The motion sound length depends on the line length,
+			while the stop sound is the same for all.</li>
+					</ul>
+					<h3>
+						version 1.20 (2014-02-26)
+					</h3>
+					<ul>
+						<li>Fix certain symbol characters not working since 1.19 (or possibly earlier on Chrome).</li>
+						<li>Fix colourshift lock always acting as caps lock too.</li>
+						<li>Fix shift lock. We have no way of determining in advance which symbols are produced by which shifted key on your particular keyboard layout; so, shift-lock starts off using my keyboard layout (UK Mac), but whenever you use shift (unlocked), it will learn the real symbol on the shift position of that key, and will thenceforth use that in shift-lock too.</li>
+						<li>Fix releasing shift/colourshift lock not working properly on Chrome/Mac. The fix for this is slightly shonky but can't be helped due to the insane differences between browsers on which events capslock fires.</li>
+						<li>Tweaks to timing and keydown/keyup sounds to try to improve responsiveness and make it a bit harder to type far too fast for the sounds to keep up.</li>
+					</ul>
+					<h3>
+						version 1.19 (2014-02-24)
+					</h3>
+					<ul>
+						<li>Moved handling of all printing characters to a keypress handler. This means I no longer have to manually map keycodes to characters, which in turn means that you should now get the correct symbol characters according to your own keyboard layout.</li>
+						<li>Movement keys (space, backspace, tab, and cursor keys) now all move on keydown, not keyup.</li>
+						<li>Provide a button to get the instructions page back.</li>
+						<li>Fix the Safari warning being shown to Chrome users (hopefully). Browser detection sucks.</li>
+					</ul>
+					<h3>
+						version 1.18 (2014-02-24)
+					</h3>
+					<ul>
+						<li>Bail if no rbga() support, and try to warn Safari users</li>
+					</ul>
+					<h3>
+						version 1.17 (2014-02-23)
+					</h3>
+					<ul>
+						<li>Renamed from "Ben's Super-Realistic Typewriter Simulator" to "OverType - The Over-The-Top Typewriter Simulator"</li>
+						<li>The '#' symbol is now available by pressing alt-3 (the standard, stupid as it is, for the Mac UK keyboard layout)</li>
+						<li>Vary the inkiness within each character, rather than just from one character to the next, by overlaying two random partial clips of each character atop itself with an opacity that depends on the sliders.</li>
+						<li>Somewhat refactored the keydown handler into more digestible chunks.</li>
+					</ul>
+					<h3>
+						version 1.16 (2014-02-18)
+					</h3>
+					<ul>
+						<li>Colour shift is now achieved by holding [esc], as holding [alt] caused unwanted side-effects from the OS acting on the key combo. Make sure the page has fully loaded before you press [esc], as otherwise the browser will interpret it as a "stop loading" command.</li>
+						<li>When colour shift partially "fails", instead of printing the whole character in red and then overprinting part of it in black, which sometimes meant the red was somewhat visible beneath the black part, each part of the character is now clipped so they do not overlap.</li>
+						<li>Improved the algorithm for deciding how often, and by how much, colour shift "fails".</li>
+						<li>Shift, colour shift, or both, can now be locked on by holding them down and pressing caps lock. Press caps lock again to release the lock. Note that unlike a computer's caps lock, a typewriter's shift lock behaves exactly as if shift were held down, so for example number keys produce symbols.</li>
+					</ul>
+					<h3>
+						version 1.15 (2014-02-15)
+					</h3>
+					<ul>
 
-				<h3>
-					version 1.2 (2014-02-10)
-				</h3>
-				<ul>
-					<li>Don't allow backspacing past the beginning of the line.</li>
-				</ul>
-				<h3>
-					version 1.1 (2014-02-10)
-				</h3>
-				<ul>
-					<li>Separate sounds when keys are pressed and released, and for the shift key.</li>
-					<li>Better (manual) carriage return sound.</li>
-					<li>Limit the speed at which you can type.</li>
-					<li>If you keep typing past the bell and hit the end of the line (80 characters), the carriage stops instead of continuing. In other words there is now a hard line length limit.</li>
-					<li>Punctuation characters are handled (these are based on my UK Mac keyboard; unless you have the same keyboard some characters will probably be "wrong" for you.).</li>
-					<li>Random variation of colour to simulate variations in key pressure and uneven ribbon ink.</li>
-					<li>Hide all the informational text when you start typing, partly to give more space for both information and typing, but mostly to dodge the problem of trying to work out where to position the typewriter output so it doesn't crash the info.</li>
-				</ul>
-				<h3>
-					version 1.0 (2014-02-09)
-				</h3>
-			</div><!-- /changelog -->			
-		</div>
-		<div class="output">
+						<li>A better algorithm for mapping Brokenness to vertical offset.
+						Rather than having a fixed offset for each character, and simply adding more
+						random offset when Brokenness is increased, we now choose an offset and threshold
+						for each character. If Brokenness is above the threshold for that char, it will be
+						offset by its consistent amount. This offset may then be randomly boosted (or not)
+						by 1 or 2px at high Brokenness levels.</li>
+
+						<li>Brokenness now maxes at 99%, given that 100% brokenness would imply being
+						completely non-functional.</li>
+
+						<li>Show the values of the sliders as numbers below them.</li>
+					
+						<li>Reduce max inkiness.</li>
+					</ul>
+					<h3>
+						version 1.14 (2014-02-12)
+					</h3>
+					<ul>
+						<li>2-colour ribbon. Hold [alt] to type red characters. Sometimes these will randomly be only partially red, to simulate failing to press the colour shift key hard enough. The frequency and amount of this failure is affected by the Brokenness control.</li>
+					</ul>
+					<h3>
+						version 1.13 (2014-02-12)
+					</h3>
+					<ul>
+						<li>Sliders to control brokenness and inkiness.</li>
+						<li>A high brokenness setting results in more wobbly and unevenly-inked text. Above 75%, the keys start to randomly break as you type, either failing to work at all (broken armature) or occasionally printing a solid block (armature works but letter has fallen off). A broken key never recovers until the brokenness is reduced back below this threshold, which unbreaks all of them.</li>
+						<li>The inkiness slider also monitors your current ink level - ie it reduces as you type.</li>
+						<li>Start from the centre of the top line of the page, instead of the top-left.</li>
+					</ul>
+					<h3>
+						version 1.12 (2014-02-12)
+					</h3>
+					<ul>
+						<li>Cursor key support. Left and right are the same as backspace and space. Up and down feed the paper by a quarter of a line height at a time.</li>
+						<li>Use a position:absolute div for each character within position:relative output block. I had hoped this would allow me to do away with the input textarea altogether and bind the key handlers to $(document), but alas even with preventDefault(), some keypresses were still occasionally being passed through to the browser, causing it to scroll (space), go back a page (backspace) etc. Still, this way of positioning seems more flexible so I kept it.</li>
+					</ul>
+					<h3>
+						version 1.11 (2014-02-12)
+					</h3>
+					<ul>
+						<li>Change alpha level instead of colour to vary ink level. This seems to look more realistic and also means that
+						if you overtype characters they get darker as they should.</li>
+						<li>Reduce the likelihood of characters having vertical offset (while keeping the range the same at +/- 1px).</li> 
+						<li>Play the CR bell for tabs and spaces as well as normal keys.</li>
+						<li>Fix lines sometimes wrapping if you overtype a lot after a lot of backspaces.</li>
+					</ul>
+					<h3>
+						version 1.10 (2014-02-11)
+					</h3>
+					<ul>
+						<li>fix CSS font-family (whoops)</li>
+						<li>per-char vertical offset was not being used consistently</li>
+					</ul>		
+					<h3>
+						version 1.9 (2014-02-11)
+					</h3>
+					<ul>
+						<li>Stylesheet for printing</li>
+						<li>Increased space between lines</li>
+					</ul>
+					<h3>
+						version 1.8 (2014-02-11)
+					</h3>
+					<ul>
+						<li>The ribbon ink now gradually runs out, so the text becomes lighter the more characters you type.</li>
+						<li>Reduced vertical offset, as it was just a tad too wibbly-wobbly.</li>
+					</ul>
+					<h3>
+						version 1.7 (2014-02-11)
+					</h3>
+					<ul>
+						<li>Prevent the hidden textarea from losing focus. It should now be safe to click anywhere on the page.</li>
+						<li>Implemented tab stops every 8 chars - press TAB to jump to the next tab stop, SHIFT-TAB jumps to the previous one.</li>
+					</ul>
+					<h3>
+						version 1.6 (2014-02-11)
+					</h3>
+					<ul>
+						<li>If both shift keys are pressed, don't do the keyup sound until both are released.</li>
+						<li>Round the vertical offset to an integer number of pixels.</li>
+						<li>Don't release the keydown mutex until animations have finished. This limits typing speed and prevents being able to type a character onto the next line while a carriage return is in progress.</li>
+					</ul>
+					<h3>
+						version 1.5 (2014-02-11)
+					</h3>
+					<ul>
+						<li>Use a separate mutex for the shift key.</li>
+						<li>Position the page on load so it doesn't jump after the first keypress.</li>
+					</ul>
+					<h3>
+						version 1.4 (2014-02-11)
+					</h3>
+					<ul>
+						<li>Move paper on keyup, not keydown.</li>
+						<li>Use a mutex to ensure only one keypress is handled at a time, instead of a timeout (also fixes a long-held key generating two characters).</li>
+						<li>Each character now has a consistent vertical offset (randomly chosen at the start), instead of randomly changing each time.</li>
+						<li>Drop shadow on page.</li>
+						<li>Fix page moving too far vertically on CR.</li>
+					</ul>
+					<h3>
+						version 1.3 (2014-02-10)
+					</h3>
+					<ul>
+						<li>The typed character now always appears in the centre of the screen; the "paper" moves.
+			Movement of paper and carriage return are animated.</li>
+						<li>A basic cursor to show where the next character will appear. This could eventually become an animated print head.</li>
+						<li>Wibbly-wobbly text: A small random vertical offset is added to each character (suggested by David Gosnell)</li>
+					</ul>
+
+					<h3>
+						version 1.2 (2014-02-10)
+					</h3>
+					<ul>
+						<li>Don't allow backspacing past the beginning of the line.</li>
+					</ul>
+					<h3>
+						version 1.1 (2014-02-10)
+					</h3>
+					<ul>
+						<li>Separate sounds when keys are pressed and released, and for the shift key.</li>
+						<li>Better (manual) carriage return sound.</li>
+						<li>Limit the speed at which you can type.</li>
+						<li>If you keep typing past the bell and hit the end of the line (80 characters), the carriage stops instead of continuing. In other words there is now a hard line length limit.</li>
+						<li>Punctuation characters are handled (these are based on my UK Mac keyboard; unless you have the same keyboard some characters will probably be "wrong" for you.).</li>
+						<li>Random variation of colour to simulate variations in key pressure and uneven ribbon ink.</li>
+						<li>Hide all the informational text when you start typing, partly to give more space for both information and typing, but mostly to dodge the problem of trying to work out where to position the typewriter output so it doesn't crash the info.</li>
+					</ul>
+					<h3>
+						version 1.0 (2014-02-09)
+					</h3>
+				</div><!-- /changelog -->			
+			</div><!-- #InfoAccordion -->
+		</div><!-- .info -->
+		<div id="Carriage">
+			<div class="output">
+			</div>
+			<div class="tippex">
+			</div>
 		</div>
 		<div class="cursor">
+		</div>
+		<!-- Warnings which may be displayed modally -->
+		<div class="warning-rgba" style="display: none; font-size: 18px; color: red;">
+			<b>You <em>really</em> need to upgrade your web browser.</b> OverType will not work on your browser because it does not support rgba() colours. They've been around for a long time now, so your browser must be pretty old. Using a very old web browser to surf the net means an ever-increasing number of sites will not work properly for you, and may be <em>unsafe</em> due to security holes which have long-since been fixed. Do yourself a favour and upgrade to a modern browser. 
 		</div>
 	</body>
 </html>

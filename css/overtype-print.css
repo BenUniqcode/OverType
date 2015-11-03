@@ -1,0 +1,23 @@
+/* Printer CSS for OverType by Ben Wheeler */
+/* Copyright (C) 2014-2015 Ben Wheeler. All rights reserved. Absolutely no warranty express or implied. */
+
+body { 
+	background-color: white; 
+}
+
+.cursor, .title, .info, .buttons, .controls, .topbar, .tippex { 
+	display: none !important; 
+}
+
+.output { 
+	box-shadow: none; 
+	border: none; 
+	padding: 10ex 0 0 0; 
+	background-image: none; 
+}
+
+#Carriage { 
+	left: 0 !important; 
+	top: 0 !important; 
+}
+
