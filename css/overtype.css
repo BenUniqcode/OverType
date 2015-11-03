@@ -127,7 +127,11 @@ h3 {
 	
 .title {
 	float: left;
-	width: 550px;
+	width: 300px;
+}
+
+.title h1 {
+	font-size: 24px; /* Only in case the image doesn't load, but also controls the space between OverType and Pro logos */
 }
 
 .controls {

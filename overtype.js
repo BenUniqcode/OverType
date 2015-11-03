@@ -752,7 +752,6 @@ var overType = function() {
 		saveAs(blob, "overtype-" + datestr + ".txt", true); // true = don't use BOM, as it's not recommended for utf-8
 	}
 
-
 	// onLoad setup
 	fallback.ready(function() {
 		// Check browser supports rgba() colours (stolen from Modernizr)
@@ -790,6 +789,7 @@ var overType = function() {
 			$('#Export').show().click(function() {
 				export_plaintext();
 			});
+			$('#ProLogo').show();
 		}
 	
 		// Accordion for info page
