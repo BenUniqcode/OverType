@@ -4,7 +4,7 @@
 "use strict";
 var overType = function() {
 	const bell_width = 69;
-	const max_width = 80;
+	const max_width = 79;
 	const tab_width = 8;
 	const xpx = 12, ypx = 28, char_height = 20;
 	const margin_top = 40, margin_left = 30;
