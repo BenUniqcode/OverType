@@ -38,8 +38,8 @@ var overType = function() {
 		'`': '~',
 	};
 	var real_shifted = {};
-	var x = max_width * xpx / 2;
-	var y = ypx;
+	var row = 1;
+	var col = Math.floor(max_width / 2);
 	var vmid = $(window).height() / 2;
 	var hmid = $(window).width() / 2;
 	var maxrow = 0;
@@ -78,7 +78,7 @@ var overType = function() {
 		$('#TippexStart').hide();
 		$('#TippexStop').show();
 		$('.tippex').show().animate({
-			top: y - ypx - 20,
+			top: (row - 1) * ypx - 20,
 		}, 200);
 	};
 	var tippex_stop = function() {
@@ -158,33 +158,32 @@ var overType = function() {
 			tippex_stop();
 		}
 		// If we're not already at the beginning of the line, start playing the return motion sound
-		if (x > 0) {
+		if (col > 0) {
 			$.ionSound.play('typewriter-carriage-return-main');
 		}
-		var line_length = x / xpx;
-		var return_time = 9 * line_length;
-		y += ypx;
+		var return_time = 9 * col;
+		row++;
 		$('#Carriage').animate({
-			top: (vmid - y) + 'px',
+			top: (vmid - row * ypx) + 'px',
 		}, 100).animate({
 			left: hmid + 'px',
 		}, return_time, function() {
 			// When the movement has finished, stop playing the motion sound, play the stop sound, and release the mutexes 
-			if (x > 0) {
+			if (col > 0) {
 				$.ionSound.stop('typewriter-carriage-return-main');
 			}
 			$.ionSound.play('typewriter-carriage-return-stop');
 			// Do a little wobble
 			$('#Carriage').animate({
 				left: (hmid + 3) + 'px',
-				top: (vmid - y + 2) + 'px',
+				top: (vmid - row * ypx + 2) + 'px',
 			}, 100).animate({
 				left: hmid + 'px',
-				top: (vmid - y) + 'px',
+				top: (vmid - row * ypx) + 'px',
 			}, 100);
 			cr_mutex = false;
 			delete keydown_keys[e.keyCode];
-			x = 0;
+			col = 0;
 		}); 
 	};
 
@@ -195,11 +194,11 @@ var overType = function() {
 		if (tippex_mode) {
 			tippex_stop();
 		}
-		if (y > 0) {
+		if (row > 0) {
 			if (pro_mode) {
-				y -= ypx;
+				row--;
 			} else {
-				y -= (ypx / 4);
+				row -= 0.25;
 			}
 			$.ionSound.play('typewriter-spacebar');
 			move_page();
@@ -215,9 +214,9 @@ var overType = function() {
 		}
 		$.ionSound.play('typewriter-spacebar');
 		if (pro_mode) {
-			y += ypx;
+			row++;
 		} else {
-			y += (ypx / 4);
+			row += 0.25;
 		}
 		move_page();
 	};
@@ -225,8 +224,8 @@ var overType = function() {
 	var keydown_cursor_left = function(e) {
 		e.preventDefault();
 		e.stopPropagation(); 
-		if (x > 0) {
-			x -= xpx;
+		if (col > 0) {
+			col--;
 			$.ionSound.play('typewriter-spacebar');
 			move_page();
 		} 
@@ -236,7 +235,7 @@ var overType = function() {
 		e.preventDefault();
 		e.stopPropagation(); 
 		advance_one_space();
-		if ((x / xpx) == bell_width) {
+		if (col == bell_width) {
 			$.ionSound.play('typewriter-bell-2');
 		} else {
 			$.ionSound.play('typewriter-spacebar');
@@ -246,8 +245,8 @@ var overType = function() {
 
 	// shared between keydown_cursor_right() and keypress()
 	var advance_one_space = function() {
-		if ((x / xpx) < max_width) {
-			x += xpx;
+		if (col < max_width) {
+			col++;
 		}
 	};
 
@@ -255,7 +254,7 @@ var overType = function() {
 		var chars = [32, 46, 121, 111, 98, 32, 108, 108, 117, 100, 32, 97, 32, 107, 99, 97, 74, 32, 115, 101, 107, 97, 109, 32, 121, 97, 108, 112, 32, 111, 110, 32, 100, 110, 97, 32, 107, 114, 111, 119, 32, 108, 108, 65];
 		// auto CR - because of the difficulty of waiting for it in the middle of typing, do it first if the next line won't fit
 		var initial_wait = 200;
-		if (x / xpx >= max_width / 2) {
+		if (col >= max_width / 2) {
 			keydown_enter(e);
 			initial_wait = 2000;
 		} 
@@ -290,26 +289,26 @@ var overType = function() {
 
 	var keydown_tab = function(e) {
 		e.preventDefault(); // Don't lose focus
-		var oldx = x;
+		var oldcol = col;
 		if (e.shiftKey || shift_lock) {
-			var prev_tab_stop = ((x / xpx) % tab_width);
+			var prev_tab_stop = (col % tab_width);
 			if (prev_tab_stop == 0) {
 				prev_tab_stop = tab_width;
 			} 
-			if ((x / xpx) - prev_tab_stop < 0) {
-				prev_tab_stop = x;
+			if (col - prev_tab_stop < 0) {
+				prev_tab_stop = col;
 			}
-			x -= (prev_tab_stop * xpx); 
+			col -= prev_tab_stop;
 		} else {
-			var next_tab_stop = tab_width - ((x / xpx) % tab_width);
+			var next_tab_stop = tab_width - (col % tab_width);
 			if (next_tab_stop == 0) {
 				next_tab_stop = tab_width;
-			} else if ((x / xpx) + next_tab_stop > max_width) {
-				next_tab_stop = max_width - (x / xpx);
+			} else if (col + next_tab_stop >= max_width) {
+				next_tab_stop = max_width - col;
 			}
-			x += (next_tab_stop * xpx);
+			col += next_tab_stop;
 		}
-		if ((oldx / xpx) < bell_width && (x / xpx) >= bell_width) {
+		if (oldcol < bell_width && col >= bell_width) {
 			$.ionSound.play('typewriter-bell-2');
 		}	else {				
 			$.ionSound.play('typewriter-spacebar');
@@ -452,7 +451,7 @@ var overType = function() {
 			ink_remaining--;
 		}
 	
-		if ((x / xpx) == bell_width) {
+		if (col == bell_width) {
 			$.ionSound.play('typewriter-bell-2');
 		} else if (! nosound) {
 			// $.ionSound.stop('typewriter-keyup-2');
@@ -474,10 +473,10 @@ var overType = function() {
 		}
 		// console.log(ink_level);
 	
-		var hpos = 'left: ' + (x + margin_left) + 'px; ';
-		var vpos = 'top: ' + (y + this_voffset + margin_top) + 'px; ';
+		var hpos = 'left: ' + (col * xpx + margin_left) + 'px; ';
+		var vpos = 'top: ' + (row * ypx + this_voffset + margin_top) + 'px; ';
 		if (tippex_mode && where == '.tippex') {
-			hpos = 'left: ' + (x + margin_left - xpx + 2) + 'px; ';
+			hpos = 'left: ' + ((col - 1) * xpx + margin_left + 2) + 'px; '; // Because .tippex's left is offset by 1 col + 2px
 			vpos = 'top: 90px; ';
 		}
 					
@@ -537,8 +536,6 @@ var overType = function() {
 			// If this character is visible on the page (that is, not in tippex, and with some ink), add it to the plaintext array
 			// (if it's overtyped, any previous character at this position is overwritten - even if that character had more ink -
 			// because the most recently-typed character is the one most likely to be wanted)
-			var row = y / ypx;
-			var col = x / xpx;
 			if (! tippex_mode && ink_level > 0) {
 				if (! plaintext[row]) {
 					plaintext[row] = [];
@@ -666,11 +663,11 @@ var overType = function() {
 
 	var move_page = function() {
 		$('#Carriage').animate({
-			top: (vmid - y) + 'px',
-			left: (hmid - x) + 'px',
+			top: (vmid - row * ypx) + 'px',
+			left: (hmid - col * xpx) + 'px',
 		}, 20);
 		// If the page is not centred, centre it
-		$('html,body').scrollTop(vmid - y - 500);
+		$('html,body').scrollTop(vmid - row * ypx - 500);
 	};
 
 	// Handler for keyup events
@@ -728,7 +725,7 @@ var overType = function() {
 		for (var exrow = 0; exrow <= maxrow; exrow++) {
 			export_array[exrow] = "";
 			if (plaintext[exrow]) {
-				for (var excol = 0; excol <= max_width; excol++) {
+				for (var excol = 0; excol < max_width; excol++) {
 					if (plaintext[exrow][excol]) {
 						export_array[exrow] += plaintext[exrow][excol];
 					} else {
