@@ -1,0 +1,8 @@
+@font-face {
+  font-family: 'Special Elite';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Special Elite'), local('SpecialElite-Regular'), 
+	url(../assets/fonts/specialelite.woff2) format('woff2'),
+	url(../assets/fonts/specialelite.ttf) format('truetype');
+}
