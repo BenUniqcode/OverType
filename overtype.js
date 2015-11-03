@@ -6,10 +6,11 @@ var overType = function() {
 	const bell_width = 69;
 	const max_width = 80;
 	const tab_width = 8;
-	const xpx = 12, ypx = 30, char_height = 20;
+	const xpx = 12, ypx = 28, char_height = 20;
 	const margin_top = 40, margin_left = 30;
 	const max_brokenness = 99;
 	const max_ink_level = 600;
+	const pro_mode = true;
 	// These values are used for shift lock if we have not yet mapped the real value of the shifted char 
 	// by pressing it with shift held down.
 	const shifted = {
@@ -41,6 +42,7 @@ var overType = function() {
 	var y = ypx;
 	var vmid = $(window).height() / 2;
 	var hmid = $(window).width() / 2;
+	var maxrow = 0;
 	var voffset = {};
 	var broken = {};
 	var brokenness = 20;
@@ -59,6 +61,7 @@ var overType = function() {
 	var redshift_lock = false;
 	var tippex_mode = false;
 	var sseq = '';
+	var plaintext = [];
 
 	var start = function() {			
 		$('.info').hide();
@@ -193,7 +196,11 @@ var overType = function() {
 			tippex_stop();
 		}
 		if (y > 0) {
-			y -= (ypx / 4);
+			if (pro_mode) {
+				y -= ypx;
+			} else {
+				y -= (ypx / 4);
+			}
 			$.ionSound.play('typewriter-spacebar');
 			move_page();
 		}
@@ -207,7 +214,11 @@ var overType = function() {
 			tippex_stop();
 		}
 		$.ionSound.play('typewriter-spacebar');
-		y += (ypx / 4);
+		if (pro_mode) {
+			y += ypx;
+		} else {
+			y += (ypx / 4);
+		}
 		move_page();
 	};
 
@@ -357,9 +368,7 @@ var overType = function() {
 		// console.log("sseq is now " + sseq + " and c is " + c);
 		if (sseq == 'right2' && c.toLowerCase() == 'b') {
 			sseq = 'b';
-			console.log("Almost there!");
 		} else if (sseq == 'b' && c.toLowerCase() == 'a') {
-			console.log("Got it!");
 			// Clear this condition to avoid recursion
 			sseq = '';
 			// Clear the mutexes otherwise they'll interfere because 'a' is currently down.
@@ -430,8 +439,8 @@ var overType = function() {
 		if (broken[c]) {
 			c = broken[c];
 		}
-
 		output_character(c, this_voffset, '.output');
+
 		// If tippex is in use, that does a white character output onto the output. We also need a regular one onto the tippex sheet.
 		if (tippex_mode) {
 			output_character(c, this_voffset, '.tippex');
@@ -504,7 +513,7 @@ var overType = function() {
 			$(where).append('<div style="position: absolute; ' + vpos + hpos + ' color: rgba(255, 0, 0, ' + ink_level + '); ' + red_height_style + '">' + c + '</div>');
 		} 
 		if (black_height > 0) {
-			// Output the (possibly partial) character in black
+			// Output the (possibly partial) character in black (or white if in tippex_mode)
 			$(where).append('<div style="position: absolute; ' + vpos + hpos + ' color: rgba(' + base_colour + ', ' + ink_level + '); ' + black_height_style + '">' + c + '</div>');
 		
 			// Maybe output further subcropped character(s) in black to make the colouring more uneven
@@ -523,6 +532,25 @@ var overType = function() {
 				var subclip_clip = 'clip: rect(' + subclip_top + 'px, ' + subclip_right + 'px, ' + subclip_bottom + 'px, ' + subclip_left + 'px); ';
 				// console.log("sign: " + sign + " r: " + r + " b:" + b + " i: " + i + " result: " + subclip_opacity);
 				$(where).append('<div style="position: absolute; ' + vpos + hpos + subclip_color + subclip_clip + '">' + c + '</div>');
+			}
+			
+			// If this character is visible on the page (that is, not in tippex, and with some ink), add it to the plaintext array
+			// (if it's overtyped, any previous character at this position is overwritten - even if that character had more ink -
+			// because the most recently-typed character is the one most likely to be wanted)
+			var row = y / ypx;
+			var col = x / xpx;
+			if (! tippex_mode && ink_level > 0) {
+				if (! plaintext[row]) {
+					plaintext[row] = [];
+				}
+				plaintext[row][col] = c;
+				// Keep track of the last line typed on, so we know many lines we have to loop over when exporting
+				if (row > maxrow) {
+					maxrow = row;
+				}
+			} else if (tippex_mode && plaintext[row][col]) {
+				// Delete any existing char
+				plaintext[row][col] = null;
 			}
 		}
 	};
@@ -695,6 +723,36 @@ var overType = function() {
 		}
 	};
 
+	var export_plaintext = function() {
+		var export_array = [];
+		for (var exrow = 0; exrow <= maxrow; exrow++) {
+			export_array[exrow] = "";
+			if (plaintext[exrow]) {
+				for (var excol = 0; excol <= max_width; excol++) {
+					if (plaintext[exrow][excol]) {
+						export_array[exrow] += plaintext[exrow][excol];
+					} else {
+						// Spaces are not stored (because there are other ways to move around and position text too) 
+						// so we have to add them	here, then remove any trailing.
+						export_array[exrow] += ' '; 
+					}
+				}
+			}
+			// Remove trailing spaces from this line and add a newline.
+			export_array[exrow].replace(/\s+$/, "");
+			export_array[exrow] += "\n";
+		}
+						
+		var blob = new Blob(export_array, {type: "text/plain;charset=utf-8"});
+		// Generate a default filename based on the date
+		// I think we can safely assume user won't export more than once per second! In any case this is just a
+		// recommended filename, and the browser won't overwrite an existing file without user interaction.
+		var d = new Date();
+		var datestr = ((((d.getFullYear() * 100 + d.getMonth() + 1) * 100 + d.getDate()) * 100 + d.getHours()) * 100 + d.getMinutes()) * 100 + d.getSeconds(); 
+		saveAs(blob, "overtype-" + datestr + ".txt", true); // true = don't use BOM, as it's not recommended for utf-8
+	}
+
+
 	// onLoad setup
 	fallback.ready(function() {
 		// Check browser supports rgba() colours (stolen from Modernizr)
@@ -728,6 +786,11 @@ var overType = function() {
 		$('#TopbarShow').click(function() {
 			topbar_show();
 		});
+		if (pro_mode) {
+			$('#Export').show().click(function() {
+				export_plaintext();
+			});
+		}
 	
 		// Accordion for info page
 		$('#InfoAccordion').accordion({
