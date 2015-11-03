@@ -423,11 +423,11 @@ var overType = function() {
 		// below 75% whereupon they are all fixed.
 		if (brokenness > 75) {
 			// Randomly break keys with a likelihood and a maximum number of broken keys that depend on the brokenness level
-			if (c != '&nbsp;' && (broken[c] || (Math.random() * brokenness > 70 && Math.random() < 0.4 && Object.keys(broken).length < (brokenness - 75) / 5))) { 
+			if (c != ' ' && (broken[c] || (Math.random() * brokenness > 70 && Math.random() < 0.4 && Object.keys(broken).length < (brokenness - 75) / 5))) { 
 				if (Math.random() > 0.7) {
-					broken[c] = '&#9608;'; // full block - as if the embossed character has fallen off the arm.
+					broken[c] = '▋'; // 5/8ths block - as if the embossed character has fallen off the arm.
 				} else {
-					broken[c] = '&nbsp;'; // as if the key doesn't work at all or is missing
+					broken[c] = ' '; // as if the key doesn't work at all or is missing
 					nosound = true;
 				}
 			}
