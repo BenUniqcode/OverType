@@ -4,12 +4,13 @@
 "use strict";
 var overType = function() {
 	const bell_width = 69;
-	const max_width = 80;
+	const maxcol = 79;
 	const tab_width = 8;
-	const xpx = 12, ypx = 30, char_height = 20;
+	const xpx = 12, ypx = 28, char_height = 20;
 	const margin_top = 40, margin_left = 30;
 	const max_brokenness = 99;
 	const max_ink_level = 600;
+	const pro_mode = true;
 	// These values are used for shift lock if we have not yet mapped the real value of the shifted char 
 	// by pressing it with shift held down.
 	const shifted = {
@@ -37,10 +38,11 @@ var overType = function() {
 		'`': '~',
 	};
 	var real_shifted = {};
-	var x = max_width * xpx / 2;
-	var y = ypx;
+	var row = 1;
+	var col = Math.floor(maxcol / 2);
 	var vmid = $(window).height() / 2;
 	var hmid = $(window).width() / 2;
+	var maxrow = 0;
 	var voffset = {};
 	var broken = {};
 	var brokenness = 20;
@@ -59,6 +61,7 @@ var overType = function() {
 	var redshift_lock = false;
 	var tippex_mode = false;
 	var sseq = '';
+	var plaintext = [];
 
 	var start = function() {			
 		$('.info').hide();
@@ -75,7 +78,7 @@ var overType = function() {
 		$('#TippexStart').hide();
 		$('#TippexStop').show();
 		$('.tippex').show().animate({
-			top: y - ypx - 20,
+			top: (row - 1) * ypx - 20,
 		}, 200);
 	};
 	var tippex_stop = function() {
@@ -155,33 +158,32 @@ var overType = function() {
 			tippex_stop();
 		}
 		// If we're not already at the beginning of the line, start playing the return motion sound
-		if (x > 0) {
+		if (col > 0) {
 			$.ionSound.play('typewriter-carriage-return-main');
 		}
-		var line_length = x / xpx;
-		var return_time = 13 * line_length;
-		y += ypx;
+		var return_time = 9 * col;
+		row++;
 		$('#Carriage').animate({
-			top: (vmid - y) + 'px',
+			top: (vmid - row * ypx) + 'px',
 		}, 100).animate({
 			left: hmid + 'px',
 		}, return_time, function() {
 			// When the movement has finished, stop playing the motion sound, play the stop sound, and release the mutexes 
-			if (x > 0) {
+			if (col > 0) {
 				$.ionSound.stop('typewriter-carriage-return-main');
 			}
 			$.ionSound.play('typewriter-carriage-return-stop');
 			// Do a little wobble
 			$('#Carriage').animate({
 				left: (hmid + 3) + 'px',
-				top: (vmid - y + 2) + 'px',
+				top: (vmid - row * ypx + 2) + 'px',
 			}, 100).animate({
 				left: hmid + 'px',
-				top: (vmid - y) + 'px',
+				top: (vmid - row * ypx) + 'px',
 			}, 100);
 			cr_mutex = false;
 			delete keydown_keys[e.keyCode];
-			x = 0;
+			col = 0;
 		}); 
 	};
 
@@ -192,8 +194,12 @@ var overType = function() {
 		if (tippex_mode) {
 			tippex_stop();
 		}
-		if (y > 0) {
-			y -= (ypx / 4);
+		if (row > 0) {
+			if (pro_mode) {
+				row--;
+			} else {
+				row -= 0.25;
+			}
 			$.ionSound.play('typewriter-spacebar');
 			move_page();
 		}
@@ -207,15 +213,19 @@ var overType = function() {
 			tippex_stop();
 		}
 		$.ionSound.play('typewriter-spacebar');
-		y += (ypx / 4);
+		if (pro_mode) {
+			row++;
+		} else {
+			row += 0.25;
+		}
 		move_page();
 	};
 
 	var keydown_cursor_left = function(e) {
 		e.preventDefault();
 		e.stopPropagation(); 
-		if (x > 0) {
-			x -= xpx;
+		if (col > 0) {
+			col--;
 			$.ionSound.play('typewriter-spacebar');
 			move_page();
 		} 
@@ -225,7 +235,7 @@ var overType = function() {
 		e.preventDefault();
 		e.stopPropagation(); 
 		advance_one_space();
-		if ((x / xpx) == bell_width) {
+		if (col == bell_width) {
 			$.ionSound.play('typewriter-bell-2');
 		} else {
 			$.ionSound.play('typewriter-spacebar');
@@ -235,8 +245,8 @@ var overType = function() {
 
 	// shared between keydown_cursor_right() and keypress()
 	var advance_one_space = function() {
-		if ((x / xpx) < max_width) {
-			x += xpx;
+		if (col < maxcol) {
+			col++;
 		}
 	};
 
@@ -244,7 +254,7 @@ var overType = function() {
 		var chars = [32, 46, 121, 111, 98, 32, 108, 108, 117, 100, 32, 97, 32, 107, 99, 97, 74, 32, 115, 101, 107, 97, 109, 32, 121, 97, 108, 112, 32, 111, 110, 32, 100, 110, 97, 32, 107, 114, 111, 119, 32, 108, 108, 65];
 		// auto CR - because of the difficulty of waiting for it in the middle of typing, do it first if the next line won't fit
 		var initial_wait = 200;
-		if (x / xpx >= max_width / 2) {
+		if (col >= maxcol / 2) {
 			keydown_enter(e);
 			initial_wait = 2000;
 		} 
@@ -279,26 +289,26 @@ var overType = function() {
 
 	var keydown_tab = function(e) {
 		e.preventDefault(); // Don't lose focus
-		var oldx = x;
+		var oldcol = col;
 		if (e.shiftKey || shift_lock) {
-			var prev_tab_stop = ((x / xpx) % tab_width);
+			var prev_tab_stop = (col % tab_width);
 			if (prev_tab_stop == 0) {
 				prev_tab_stop = tab_width;
 			} 
-			if ((x / xpx) - prev_tab_stop < 0) {
-				prev_tab_stop = x;
+			if (col - prev_tab_stop < 0) {
+				prev_tab_stop = col;
 			}
-			x -= (prev_tab_stop * xpx); 
+			col -= prev_tab_stop;
 		} else {
-			var next_tab_stop = tab_width - ((x / xpx) % tab_width);
+			var next_tab_stop = tab_width - (col % tab_width);
 			if (next_tab_stop == 0) {
 				next_tab_stop = tab_width;
-			} else if ((x / xpx) + next_tab_stop > max_width) {
-				next_tab_stop = max_width - (x / xpx);
+			} else if (col + next_tab_stop > maxcol) {
+				next_tab_stop = maxcol - col;
 			}
-			x += (next_tab_stop * xpx);
+			col += next_tab_stop;
 		}
-		if ((oldx / xpx) < bell_width && (x / xpx) >= bell_width) {
+		if (oldcol < bell_width && col >= bell_width) {
 			$.ionSound.play('typewriter-bell-2');
 		}	else {				
 			$.ionSound.play('typewriter-spacebar');
@@ -357,9 +367,7 @@ var overType = function() {
 		// console.log("sseq is now " + sseq + " and c is " + c);
 		if (sseq == 'right2' && c.toLowerCase() == 'b') {
 			sseq = 'b';
-			console.log("Almost there!");
 		} else if (sseq == 'b' && c.toLowerCase() == 'a') {
-			console.log("Got it!");
 			// Clear this condition to avoid recursion
 			sseq = '';
 			// Clear the mutexes otherwise they'll interfere because 'a' is currently down.
@@ -414,11 +422,11 @@ var overType = function() {
 		// below 75% whereupon they are all fixed.
 		if (brokenness > 75) {
 			// Randomly break keys with a likelihood and a maximum number of broken keys that depend on the brokenness level
-			if (c != '&nbsp;' && (broken[c] || (Math.random() * brokenness > 70 && Math.random() < 0.4 && Object.keys(broken).length < (brokenness - 75) / 5))) { 
+			if (c != ' ' && (broken[c] || (Math.random() * brokenness > 70 && Math.random() < 0.4 && Object.keys(broken).length < (brokenness - 75) / 5))) { 
 				if (Math.random() > 0.7) {
-					broken[c] = '&#9608;'; // full block - as if the embossed character has fallen off the arm.
+					broken[c] = '▋'; // 5/8ths block - as if the embossed character has fallen off the arm.
 				} else {
-					broken[c] = '&nbsp;'; // as if the key doesn't work at all or is missing
+					broken[c] = ' '; // as if the key doesn't work at all or is missing
 					nosound = true;
 				}
 			}
@@ -430,8 +438,8 @@ var overType = function() {
 		if (broken[c]) {
 			c = broken[c];
 		}
-
 		output_character(c, this_voffset, '.output');
+
 		// If tippex is in use, that does a white character output onto the output. We also need a regular one onto the tippex sheet.
 		if (tippex_mode) {
 			output_character(c, this_voffset, '.tippex');
@@ -443,7 +451,7 @@ var overType = function() {
 			ink_remaining--;
 		}
 	
-		if ((x / xpx) == bell_width) {
+		if (col == bell_width) {
 			$.ionSound.play('typewriter-bell-2');
 		} else if (! nosound) {
 			// $.ionSound.stop('typewriter-keyup-2');
@@ -465,10 +473,10 @@ var overType = function() {
 		}
 		// console.log(ink_level);
 	
-		var hpos = 'left: ' + (x + margin_left) + 'px; ';
-		var vpos = 'top: ' + (y + this_voffset + margin_top) + 'px; ';
+		var hpos = 'left: ' + (col * xpx + margin_left) + 'px; ';
+		var vpos = 'top: ' + (row * ypx + this_voffset + margin_top) + 'px; ';
 		if (tippex_mode && where == '.tippex') {
-			hpos = 'left: ' + (x + margin_left - xpx + 2) + 'px; ';
+			hpos = 'left: ' + ((col - 1) * xpx + margin_left + 2) + 'px; '; // Because .tippex's left is offset by 1 col + 2px
 			vpos = 'top: 90px; ';
 		}
 					
@@ -504,7 +512,7 @@ var overType = function() {
 			$(where).append('<div style="position: absolute; ' + vpos + hpos + ' color: rgba(255, 0, 0, ' + ink_level + '); ' + red_height_style + '">' + c + '</div>');
 		} 
 		if (black_height > 0) {
-			// Output the (possibly partial) character in black
+			// Output the (possibly partial) character in black (or white if in tippex_mode)
 			$(where).append('<div style="position: absolute; ' + vpos + hpos + ' color: rgba(' + base_colour + ', ' + ink_level + '); ' + black_height_style + '">' + c + '</div>');
 		
 			// Maybe output further subcropped character(s) in black to make the colouring more uneven
@@ -523,6 +531,23 @@ var overType = function() {
 				var subclip_clip = 'clip: rect(' + subclip_top + 'px, ' + subclip_right + 'px, ' + subclip_bottom + 'px, ' + subclip_left + 'px); ';
 				// console.log("sign: " + sign + " r: " + r + " b:" + b + " i: " + i + " result: " + subclip_opacity);
 				$(where).append('<div style="position: absolute; ' + vpos + hpos + subclip_color + subclip_clip + '">' + c + '</div>');
+			}
+			
+			// If this character is visible on the page (that is, not in tippex, and with some ink), add it to the plaintext array
+			// (if it's overtyped, any previous character at this position is overwritten - even if that character had more ink -
+			// because the most recently-typed character is the one most likely to be wanted)
+			if (! tippex_mode && ink_level > 0) {
+				if (! plaintext[row]) {
+					plaintext[row] = [];
+				}
+				plaintext[row][col] = c;
+				// Keep track of the last line typed on, so we know many lines we have to loop over when exporting
+				if (row > maxrow) {
+					maxrow = row;
+				}
+			} else if (tippex_mode && plaintext[row][col]) {
+				// Delete any existing char
+				plaintext[row][col] = null;
 			}
 		}
 	};
@@ -638,11 +663,11 @@ var overType = function() {
 
 	var move_page = function() {
 		$('#Carriage').animate({
-			top: (vmid - y) + 'px',
-			left: (hmid - x) + 'px',
+			top: (vmid - row * ypx) + 'px',
+			left: (hmid - col * xpx) + 'px',
 		}, 20);
 		// If the page is not centred, centre it
-		$('html,body').scrollTop(vmid - y - 500);
+		$('html,body').scrollTop(vmid - row * ypx - 500);
 	};
 
 	// Handler for keyup events
@@ -695,6 +720,35 @@ var overType = function() {
 		}
 	};
 
+	var export_plaintext = function() {
+		var export_array = [];
+		for (var exrow = 0; exrow <= maxrow; exrow++) {
+			export_array[exrow] = "";
+			if (plaintext[exrow]) {
+				for (var excol = 0; excol <= maxcol; excol++) { // cols go from 0 to maxcol inclusive
+					if (plaintext[exrow][excol]) {
+						export_array[exrow] += plaintext[exrow][excol];
+					} else {
+						// Spaces are not stored (because there are other ways to move around and position text too) 
+						// so we have to add them	here, then remove any trailing.
+						export_array[exrow] += ' '; 
+					}
+				}
+			}
+			// Remove trailing spaces from this line and add a newline.
+			export_array[exrow] = export_array[exrow].replace(/\s+$/, "");
+			export_array[exrow] += "\n";
+		}
+						
+		var blob = new Blob(export_array, {type: "text/plain;charset=utf-8"});
+		// Generate a default filename based on the date
+		// I think we can safely assume user won't export more than once per second! In any case this is just a
+		// recommended filename, and the browser won't overwrite an existing file without user interaction.
+		var d = new Date();
+		var datestr = ((((d.getFullYear() * 100 + d.getMonth() + 1) * 100 + d.getDate()) * 100 + d.getHours()) * 100 + d.getMinutes()) * 100 + d.getSeconds(); 
+		saveAs(blob, "overtype-" + datestr + ".txt", true); // true = don't use BOM, as it's not recommended for utf-8
+	}
+
 	// onLoad setup
 	fallback.ready(function() {
 		// Check browser supports rgba() colours (stolen from Modernizr)
@@ -728,6 +782,12 @@ var overType = function() {
 		$('#TopbarShow').click(function() {
 			topbar_show();
 		});
+		if (pro_mode) {
+			$('#Export').show().click(function() {
+				export_plaintext();
+			});
+			$('#ProLogo').show();
+		}
 	
 		// Accordion for info page
 		$('#InfoAccordion').accordion({

@@ -90,7 +90,7 @@ h3 {
 .output {
 	margin-bottom: 2em;
 	position: relative; /* within position:absolute #Carriage */
-	width: 52em;
+	width: 51em;
 	height: 160ex;
 	left: 0;
 	top: 0;
@@ -127,7 +127,11 @@ h3 {
 	
 .title {
 	float: left;
-	width: 550px;
+	width: 300px;
+}
+
+.title h1 {
+	font-size: 24px; /* Only in case the image doesn't load, but also controls the space between OverType and Pro logos */
 }
 
 .controls {

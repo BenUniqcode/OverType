@@ -32,7 +32,11 @@
         ],
         // IonSound
         'ion.sound': [
-        	'assets/ion.sound-3.0.6/js/ion.sound.min.js'
+        	'assets/ion.sound-3.0.6/js/ion.sound.js'
+        ],
+        // FileSaver.js
+        'saveAs': [
+        	'assets/FileSaver.js/FileSaver.min.js'
         ],
         // OverType
         'overType': [
@@ -52,7 +56,10 @@
 		<div class="bars">
 			<div class="topbar">
 				<div class="title">
-					<h1><img src="images/overtype_logo.png" alt="OverType" height="40"></h1>
+					<h1>
+						<img src="images/overtype_logo.png" alt="OverType">
+						<img id="ProLogo" src="images/overtype_pro_logo.png" alt="Pro" style="display: none">
+					</h1>
 					<h2 style="margin-bottom: 0"><img src="images/overtype_subhead.png" alt="The Over-The-Top Typewriter Simulator" height="27"></h2>
 				</div>
 				<div class="controls">
@@ -108,6 +115,7 @@
 				<div class="buttons right">
 					<button id="TopbarHide"">Hide Controls</button>
 					<button id="TopbarShow" style="display: none">Show Controls</button>
+					<button id="Export" style="display: none">Export</button>
 				</div>
 			</div><!-- .buttonbar -->
 		</div><!-- .bars -->
