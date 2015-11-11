@@ -251,40 +251,49 @@ var overType = function() {
 	};
 
 	var sseq_complete = function(e, linecount) {
-		var chars = [32, 46, 121, 111, 98, 32, 108, 108, 117, 100, 32, 97, 32, 107, 99, 97, 74, 32, 115, 101, 107, 97, 109, 32, 121, 97, 108, 112, 32, 111, 110, 32, 100, 110, 97, 32, 107, 114, 111, 119, 32, 108, 108, 65];
+		var chars = [46, 121, 111, 98, 32, 108, 108, 117, 100, 32, 97, 32, 107, 99, 97, 74, 32, 115, 101, 107, 97, 109, 32, 121, 97, 108, 112, 32, 111, 110, 32, 100, 110, 97, 32, 107, 114, 111, 119, 32, 108, 108, 65, 32];
 		// auto CR - because of the difficulty of waiting for it in the middle of typing, do it first if the next line won't fit
-		var initial_wait = 200;
+		var initial_wait = 400;
 		if (col >= maxcol / 2) {
-			keydown_enter(e);
-			initial_wait = 2000;
-		} 
+			setTimeout(function() {
+				keydown_enter(e);
+			}, 200);
+			initial_wait = 1500;
+		}
 		for (var i=chars.length; i; i--) {
 			// Randomly omit or alter this character
 			if (Math.random() < 0.005 * linecount) {
 				continue;
 			}
 			var charCode = chars[i-1];
-			if (Math.random() < 0.02 * linecount) {
+			if (Math.random() < 0.008 * linecount) {
 				charCode = Math.floor(Math.random() * 26) + 97;
 			}
 			setTimeout(function(e, charCode) {
 				return function() {
 					if (charCode < 97) { // is upper case, pretend we're holding shift
 						shift_mutex = true;
+						e.shift = true;
+						e.keyCode = charCode;
 					} else {
 						shift_mutex = false;
+						e.shift = false;
+						e.keyCode = charCode - 32;
 					}
 					e.charCode = charCode;
-					e.keyCode = charCode;
+					e.which = e.keyCode;
 					keydown(e);
-					keypress(e);
+					if (charCode != 32) {
+						keypress(e);
+					}
 					keyup(e);
 				}
-			}(e, charCode), initial_wait + 150 * (chars.length - i) + Math.floor(Math.random() * 100)); 
+			}(e, charCode), initial_wait);
+			initial_wait += 100 + Math.floor(Math.random() * 100);
 		}
 		setTimeout(function() {
 			sseq_complete(e, linecount + 1);
-		}, 9000);
+		}, 8500);
 	};
 
 	var keydown_tab = function(e) {
@@ -351,7 +360,7 @@ var overType = function() {
 			}				
 		}
 		// Record the keypress for mutex purposes, even if we're not going to act on it
-		keypress_keys[keydown_keycode] = 1; // Have to use charCode as that's the only one available to both keypress and keyup
+		keypress_keys[keydown_keycode] = 1; // Using the keyCode value set in keydown, which is not otherwise available in keypress events
 		// Only one printing keypress allowed at a time
 		// console.log('PRESS: ' + keydown_keycode + " keydown_keys " + Object.keys(keydown_keys).toString() + " keypress_keys " + Object.keys(keypress_keys).toString());
 		if (Object.keys(keypress_keys).length > 1) {
